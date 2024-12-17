@@ -57,8 +57,6 @@ def move2(vx,rz, duration):
     counter=0
     print(duration)
     while counter < duration + 0.4 : 
-        print(counter)
-
         # Start one loop
         rclpy.spin_once(aNode)
         counter = time()-start
