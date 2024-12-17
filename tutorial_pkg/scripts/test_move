@@ -37,7 +37,7 @@ def secTalk():
     aNode.destroy_node()
     rclpy.shutdown()
 
-
+#utilize spin and stop the process when duration is achieved
 def move1(vx,rz, duration):
     aNode= Node( "tempTalker" )
     #finish=rclpy.task.function
@@ -48,7 +48,7 @@ def move1(vx,rz, duration):
     # Clean everything and switch the light off
     aNode.destroy_node()
 
-
+#utilize spin once and continue process until duration is achieved
 def move2(vx,rz, duration):
     start = time()
     aNode= Node( "tempTalker" )
@@ -63,12 +63,12 @@ def move2(vx,rz, duration):
     aNode.destroy_node()
     return()
 
-def movedegre(deg):
+def move_degre(deg):
     deg_per_sec=0.5*180/3.14
     duration=deg/deg_per_sec - 0.25
     move2(0.0,0.5,duration)
 
-def movemetre(m):
+def move_metre(m):
     duration=m/0.5
     move2(0.5,0.0,duration)
 
@@ -82,14 +82,14 @@ def parcours():
      # Initialize ROS node with ROS client
     rclpy.init()
     # Parcours à executer
-    movemetre(1)
-    movedegre(90)
-    movemetre(1)
-    movedegre(90)
-    movemetre(1)
-    movedegre(90)
-    movemetre(1)
-    movedegre(90)
+    move_metre(1)
+    move_degre(90)
+    move_metre(1)
+    move_degre(90)
+    move_metre(1)
+    move_degre(90)
+    move_metre(1)
+    move_degre(90)
     stop_mov(10)
 
     # Clean everything and switch the light off
