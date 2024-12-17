@@ -55,7 +55,6 @@ def move2(vx,rz, duration):
     #finish=rclpy.task.function
     talker= CMD_ROBOT(aNode,duration,vx,rz)
     counter=0
-    print(duration)
     while counter < duration + 0.4 : 
         # Start one loop
         rclpy.spin_once(aNode)
