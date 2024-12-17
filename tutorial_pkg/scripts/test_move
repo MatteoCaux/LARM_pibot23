@@ -1,0 +1,132 @@
+#!/usr/bin/python3
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from time import time
+
+
+
+
+print("test_move :: START...")
+
+def oneTalk():
+    # Initialize ROS client
+    rclpy.init()
+    # Create a node
+    aNode= Node( "simpleTalker" )
+    talker= CMD_ROBOT(aNode)
+
+    # Add the message to the list of messages to publish
+    aPublisher.publish(msg)
+    # Activate the ROS client with the node
+    # (that will publish the message on testTopic topic)
+    rclpy.spin_once(aNode, timeout_sec= 10.0)
+    # Clean everything and switch the light off
+    aNode.destroy_node()
+    rclpy.shutdown()
+
+
+def secTalk():
+    # Initialize ROS node with ROS client
+    rclpy.init()
+    aNode= Node( "infTalker" )
+    talker= CMD_ROBOT(aNode,10)
+    # Start infinite loop
+    rclpy.spin(aNode)
+    # Clean everything and switch the light off
+    aNode.destroy_node()
+    rclpy.shutdown()
+
+
+def move1(vx,rz, duration):
+    aNode= Node( "tempTalker" )
+    #finish=rclpy.task.function
+    talker= CMD_ROBOT(aNode,duration,vx,rz)
+    completed=False
+    # Start infinite loop
+    rclpy.spin(aNode)#_until_future_complete
+    # Clean everything and switch the light off
+    aNode.destroy_node()
+
+
+def move2(vx,rz, duration):
+    start = time()
+    aNode= Node( "tempTalker" )
+    #finish=rclpy.task.function
+    talker= CMD_ROBOT(aNode,duration,vx,rz)
+    counter=0
+    print(duration)
+    while counter < duration + 0.4 : 
+        print(counter)
+
+        # Start one loop
+        rclpy.spin_once(aNode)
+        counter = time()-start
+    # Clean everything and switch the light off
+    aNode.destroy_node()
+    return()
+
+def movedegre(deg):
+    deg_per_sec=0.5*180/3.14
+    duration=deg/deg_per_sec - 0.25
+    move2(0.0,0.5,duration)
+
+def movemetre(m):
+    duration=m/0.5
+    move2(0.5,0.0,duration)
+
+def stop_mov(duration):
+    move2(0.0,0.0,duration)
+
+def parcours():
+     # Initialize ROS node with ROS client
+    rclpy.init()
+    # Parcours à executer
+    movemetre(1)
+    movedegre(90)
+    movemetre(1)
+    movedegre(90)
+    movemetre(1)
+    movedegre(90)
+    movemetre(1)
+    movedegre(90)
+    stop_mov(10)
+
+    # Clean everything and switch the light off
+    rclpy.shutdown()
+
+class CMD_ROBOT:
+    
+    def __init__(self,rosNode,duration,vx,rz): 
+        self._vx = vx #m/s
+        self._rz = rz #rad/s
+        #self._duration=duration
+        self._publisher= rosNode.create_publisher( Twist, '/multi/cmd_nav', 10 )
+        self._timer = rosNode.create_timer(0.5, self.timer_callback)
+        #self._i=0
+
+    def timer_callback(self):
+        velocity=Twist()
+        """
+        if self._i <=self._duration*2 :
+            velocity.linear.x = self._vx #m/s
+            velocity.angular.z = self._rz #rad/s
+            self._publisher.publish(velocity)
+        else :
+            velocity.linear.x = 0.0 #m/s
+            velocity.angular.z = 0.0 #rad/s
+            self._publisher.publish(velocity) 
+            #set_result(True)
+            self.destroy_node()
+        self._i+=1
+        """
+        velocity.linear.x = self._vx #m/s
+        velocity.angular.z = self._rz #rad/s
+        self._publisher.publish(velocity)
+
+
+# Execute the function.
+if __name__ == "__main__":
+    parcours()
+
+
