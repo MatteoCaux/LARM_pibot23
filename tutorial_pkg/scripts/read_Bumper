@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from kobuki_ros_interfaces.msg import BumperEvent
+from test_move import stop_mov
 #from test_move import stop_mov
 #test
 def listen():
@@ -25,10 +26,11 @@ class ROSBumperListener():
         )
 
     def listener_callback(self, msg):
-        self._logger.info( 'I heard: ' + msg)
-    
-    #def urgent_stop():
-        #stop_mov(2)
+        self._logger.info( 'I heard: ' + str(msg.state))
+        if msg.state==1:
+            urgent_stop()    
+    def urgent_stop():
+        stop_mov(2)
     
 if __name__ == '__main__':
     listen()
