@@ -25,9 +25,9 @@ class ROSBumperListener():
         )
 
     def listener_callback(self, msg):
-        self._logger.info( 'I heard: ' + str(msg))
-        if str.state==1:
-            urgent_stop()
+        self._logger.info( 'I heard: ' + str(msg.state))
+        if msg.state==1:
+            urgent_stop()    
     def urgent_stop():
         stop_mov(2)
     
