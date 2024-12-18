@@ -1,20 +1,7 @@
-#!/usr/bin/python3
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from time import time
-
-###MOVE BASE FUNCTION
-#utilize spin and stop the process when duration is achieved
-def move1(vx,rz, duration):
-    aNode= Node( "tempTalker" )
-    #finish=rclpy.task.function
-    talker= CMD_ROBOTV1(aNode,duration,vx,rz)
-    completed=False
-    # Start infinite loop
-    rclpy.spin(aNode)#_until_future_complete
-    # Clean everything and switch the light off
-    aNode.destroy_node()
 
 #utilize spin once and continue process until duration is achieved
 #may have a problem of duration due to timer inside of CMD_ROBOT
@@ -47,25 +34,6 @@ def stop_mov(duration): #stop the movements for a certain duration
     Fonction qui arrête le robot
     """
     move2(0.0,0.0,duration)
-
-### PATH TO EXECUTE
-def path():
-     # Initialize ROS node with ROS client
-    rclpy.init()
-    # Parcours à executer
-    move_metre(1)
-    move_degre(90)
-    move_metre(1)
-    move_degre(90)
-    move_metre(1)
-    move_degre(90)
-    move_metre(1)
-    move_degre(90)
-    stop_mov(10)
-    # Clean everything and switch the light off
-    rclpy.shutdown()
-
-### CLASS OF A MOV CMD TO THE ROBOT
 class CMD_ROBOTV2: #for move2
     #publish once the command, no duration
     def __init__(self,rosNode,_duration,vx,rz): 
@@ -81,33 +49,8 @@ class CMD_ROBOTV2: #for move2
         velocity.angular.z = self._rz #rad/s
         self._publisher.publish(velocity)
 
-class CMD_ROBOTV1:#for move1
-    #publish the command for the duration
-    def __init__(self,rosNode,duration,vx,rz): 
-        self._vx = vx #m/s
-        self._rz = rz #rad/s
-        self._duration=duration
-        self._publisher= rosNode.create_publisher( Twist, '/multi/cmd_nav', 10 )
-        self._timer = rosNode.create_timer(0.5, self.timer_callback)
-        self._i=0
-
-    def timer_callback(self):
-        velocity=Twist()
-        if self._i <=self._duration*2 :
-            velocity.linear.x = self._vx #m/s
-            velocity.angular.z = self._rz #rad/s
-            self._publisher.publish(velocity)
-        else :
-            velocity.linear.x = 0.0 #m/s
-            velocity.angular.z = 0.0 #rad/s
-            self._publisher.publish(velocity) 
-            rosNode.destroy_node()
-        self._i+=1
-
-
 # Execute the function.
 if __name__ == "__main__":
-    print("test_move :: START...")
+    print("move_robot :: START...")
     path()
     print("move finished")
-
