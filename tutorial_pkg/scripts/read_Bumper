@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from kobuki_ros_interfaces.msg import BumperEvent
 #from test_move import stop_mov
 #test
 def listen():
@@ -19,7 +19,10 @@ class ROSBumperListener():
 
     def __init__(self, rosNode):
         self._logger= rosNode.get_logger()
-        self._subscription= rosNode.create_subscription(BumperEvent, '/events/bumper',self.listener_callback, 10)
+        self._subscription= rosNode.create_subscription(
+            BumperEvent, '/events/bumper',
+            self.listener_callback, 10
+        )
 
     def listener_callback(self, msg):
         self._logger.info( 'I heard: ' + msg.data)
