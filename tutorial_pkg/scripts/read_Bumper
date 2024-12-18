@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from kobuki_ros_interfaces.msg import BumperEvent
+#from geometry_msgs.msg import Twist
 from move_robot import stop_mov, move_metre, move_degre
 #test
 def listen():
@@ -16,7 +17,8 @@ def listen():
     rclpy.shutdown()
 
 class ROSBumperListener():
-
+    #BumperEvent, '/events/bumper', for real
+    #Twist, '/cmd_vel', for virtual testing 
     def __init__(self, rosNode):
         self._logger= rosNode.get_logger()
         self._subscription= rosNode.create_subscription(
@@ -27,6 +29,7 @@ class ROSBumperListener():
     def listener_callback(self, msg):
         self._logger.info( 'I heard: ' + str(msg))
         if msg.state==1:
+            print("STOP")
             urgent_stop()    
     def urgent_stop():
         stop_mov(2)
