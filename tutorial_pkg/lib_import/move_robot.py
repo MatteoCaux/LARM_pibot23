@@ -84,10 +84,3 @@ class CMD_ROBOTV1:#for move1
             self._publisher.publish(velocity) 
             rosNode.destroy_node()
         self._i+=1
-
-
-# Execute the function.
-if __name__ == "__main__":
-    print("move_robot :: START...")
-    path()
-    print("move finished")

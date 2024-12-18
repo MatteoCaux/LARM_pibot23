@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+
 import rclpy
 from rclpy.node import Node
 from kobuki_ros_interfaces.msg import BumperEvent
@@ -28,12 +28,3 @@ class ROSBumperListener():
 
     def listener_callback(self, msg):
         self._logger.info( 'I heard: ' + str(msg))
-        if msg.state==1:
-            print("STOP")
-            urgent_stop()    
-    def urgent_stop():
-        stop_mov(2)
-    def maneauver():
-        move_metre(-1)
-if __name__ == '__main__':
-    listen()

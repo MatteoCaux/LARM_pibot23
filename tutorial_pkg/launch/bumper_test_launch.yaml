@@ -1,0 +1,10 @@
+launch:
+
+#- include:
+#    file: "$(find-pkg-share tutorial_pkg)/scripts/test_move"
+
+- executable:
+    #cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard cmd_vel:=/multi/cmd_teleop'
+    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg test_move'
+    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg read_Bumper'
+
