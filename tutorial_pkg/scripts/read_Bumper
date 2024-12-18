@@ -20,7 +20,8 @@ class ROSBumperListener():
     def __init__(self, rosNode):
         self._logger= rosNode.get_logger()
         self._subscription= rosNode.create_subscription(
-            BumperEvent, '/events/bumper',
+            
+            kobuki_ros_interfaces/msg/BumperEvent, '/events/bumper',
             self.listener_callback, 10
         )
 
