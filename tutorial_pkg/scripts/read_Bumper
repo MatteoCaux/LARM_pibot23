@@ -8,7 +8,7 @@ def listen():
     # Initialize ROS node with ROS client
     rclpy.init()
     aNode= Node( "listener" )
-    listener= ROSListener(aNode)
+    listener= ROSBumperListener(aNode)
     # Start infinite loop
     rclpy.spin(aNode)
     # Clean everything and switch the light off
