@@ -15,12 +15,12 @@ def listen():
     aNode.destroy_node()
     rclpy.shutdown()
 
-class ROSListener():
+class ROSBumperListener():
 
     def __init__(self, rosNode):
         self._logger= rosNode.get_logger()
         self._subscription= rosNode.create_subscription(
-            String, 'testTopic',
+            BumperEvent, '/events/bumper',
             self.listener_callback, 10
         )
 
