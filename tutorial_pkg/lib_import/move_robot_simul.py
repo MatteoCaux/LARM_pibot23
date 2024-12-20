@@ -43,7 +43,7 @@ def move_degre(deg):# turn on himself the deg value (degres, full turn = 360), p
 
 def move_metre(m): # move m meter in front of himself
     duration=m/0.5
-    move2(0.5,0.0,duration)
+    move1(0.5,0.0,duration)
 
 def stop_mov(duration): #stop the movements for a certain duration
     """
