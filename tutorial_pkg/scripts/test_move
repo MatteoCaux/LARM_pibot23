@@ -9,6 +9,7 @@ from read_Bumper import listen
 def path():
      # Initialize ROS node with ROS client
     rclpy.init()
+    move_metre(1)
     listen()
     # Parcours à executer
     move_metre(1)

@@ -8,14 +8,14 @@ from move_robot import stop_mov, move_metre, move_degre
 #test
 def listen():
     # Initialize ROS node with ROS client
-    #rclpy.init()
+    rclpy.init()
     aNode= Node( "listener" )
     listener= ROSBumperListener(aNode)
     # Start infinite loop
     rclpy.spin(aNode)
     # Clean everything and switch the light off
     aNode.destroy_node()
-    #rclpy.shutdown()
+    rclpy.shutdown()
 
 
 class ROSBumperListener():

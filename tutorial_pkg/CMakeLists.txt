@@ -10,13 +10,14 @@ find_package(ament_cmake REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
-#find_package(pkg-tbot REQUIRED)
+
 
 #Python scripts
 install( PROGRAMS scripts/test_move DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/tourner DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/read_Bumper.py DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/move_robot.py DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS scripts/listen_bumper.py DESTINATION lib/${PROJECT_NAME} )
 
 # Install resource files.
 install(DIRECTORY
