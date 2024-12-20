@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import rclpy
 from sensor_msgs.msg import Twist, LaserScan
-#import read_bumper
+import scan_echo
 
 # Ros Node process:
 def main():
@@ -44,8 +44,8 @@ class StraightCtrl :
 
     def scan_callback(self, scanMsg ):
         self._logger.info( '> get scan' )
-        #self.obstacle_right = False
-        #self.obstacle_left = False
+        self.obstacle_right = False
+        self.obstacle_left = False
 
 
     def control_callback(self, rosNode ):
