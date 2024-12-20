@@ -54,11 +54,11 @@ class CMD_ROBOTV2: #for move2
         self._vx = vx #m/s
         self._rz = rz #rad/s
         self._publisher= rosNode.create_publisher( Twist, '/multi/cmd_nav', 10 )
-        self._subscription= rosNode.create_subscription(Bool, '/com_signal/bumper',self.bumper_state, 10)
+        self._subscription= rosNode.create_subscription(builtins.int*, '/com_signal/bumper',self.bumper_state, 10)
         #self._timer = rosNode.create_timer(0.5, self.timer_callback)
         self.timer_callback
-    def bumper_state(self, msg)
-        if msg:
+    def bumper_state(self, msg):
+        if msg==1:
             velocity=Twist()
             velocity.linear.x = 0 #m/s
             velocity.angular.z = 0 #rad/s

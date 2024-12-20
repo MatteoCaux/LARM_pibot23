@@ -26,12 +26,12 @@ class ROSBumperListener():
             BumperEvent, '/events/bumper',
             self.listener_callback, 10
         )
-        self._publisher= rosNode.create_publisher( Bool, '/com_signal/bumper', 10 )
+        self._publisher= rosNode.create_publisher( builtins.int*, '/com_signal/bumper', 10 )
 
     def listener_callback(self, msg):
         self._logger.info( 'I heard: ' + str(msg))
         print(msg.state)
         if msg.state==1:
-            self._publisher.publish(True)
+            self._publisher.publish(1)
         else:
-            self._publisher.publish(False)
+            self._publisher.publish(0)
