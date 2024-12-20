@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from kobuki_ros_interfaces.msg import BumperEvent
 #from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 from move_robot import stop_mov, move_metre, move_degre
 #test
 def listen():
@@ -26,7 +27,7 @@ class ROSBumperListener():
             BumperEvent, '/events/bumper',
             self.listener_callback, 10
         )
-        self._publisher= rosNode.create_publisher( builtins.int*, '/com_signal/bumper', 10 )
+        self._publisher= rosNode.create_publisher( Bool, '/com_signal/bumper', 10 )
 
     def listener_callback(self, msg):
         self._logger.info( 'I heard: ' + str(msg))
