@@ -15,9 +15,10 @@ find_package(ament_cmake REQUIRED)
 #Python scripts
 install( PROGRAMS scripts/test_move DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/tourner DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS scripts/scan_echo DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/read_Bumper.py DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/move_robot.py DESTINATION lib/${PROJECT_NAME} )
-install( PROGRAMS scripts/listen_bumper.py DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS scripts/listen_bumper DESTINATION lib/${PROJECT_NAME} )
 
 # Install resource files.
 install(DIRECTORY
