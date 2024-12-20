@@ -7,14 +7,15 @@ from move_robot import stop_mov, move_metre, move_degre
 #test
 def listen():
     # Initialize ROS node with ROS client
-    rclpy.init()
+    #rclpy.init()
     aNode= Node( "listener" )
     listener= ROSBumperListener(aNode)
     # Start infinite loop
     rclpy.spin(aNode)
     # Clean everything and switch the light off
     aNode.destroy_node()
-    rclpy.shutdown()
+    #rclpy.shutdown()
+
 
 class ROSBumperListener():
     #BumperEvent, '/events/bumper', for real
@@ -25,6 +26,12 @@ class ROSBumperListener():
             BumperEvent, '/events/bumper',
             self.listener_callback, 10
         )
+        self._publisher= rosNode.create_publisher( Bool, '/com_signal/bumper', 10 )
 
     def listener_callback(self, msg):
         self._logger.info( 'I heard: ' + str(msg))
+        print(msg.state)
+        if msg.state==1:
+            self._publisher.publish(True)
+        else:
+            self._publisher.publish(False)

@@ -3,6 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from time import time
 
+emergency_stop=False
 ###MOVE BASE FUNCTION
 #utilize spin and stop the process when duration is achieved
 def move1(vx,rz, duration):
@@ -23,7 +24,7 @@ def move2(vx,rz, duration):
     #finish=rclpy.task.function
     talker= CMD_ROBOTV2(aNode,duration,vx,rz)
     counter=0
-    while counter < duration : 
+    while counter < duration and not emergency_stop: 
         # Start one loop
         rclpy.spin_once(aNode)
         counter = time()-start
@@ -53,9 +54,16 @@ class CMD_ROBOTV2: #for move2
         self._vx = vx #m/s
         self._rz = rz #rad/s
         self._publisher= rosNode.create_publisher( Twist, '/multi/cmd_nav', 10 )
+        self._subscription= rosNode.create_subscription(Bool, '/com_signal/bumper',self.bumper_state, 10)
         #self._timer = rosNode.create_timer(0.5, self.timer_callback)
         self.timer_callback
-
+    def bumper_state(self, msg)
+        if msg:
+            velocity=Twist()
+            velocity.linear.x = 0 #m/s
+            velocity.angular.z = 0 #rad/s
+            self._publisher.publish(velocity)
+            emergency_stop=True
     def timer_callback(self):
         velocity=Twist()
         velocity.linear.x = self._vx #m/s
