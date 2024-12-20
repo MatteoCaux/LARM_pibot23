@@ -17,7 +17,6 @@ install( PROGRAMS scripts/test_move DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/test_move_simul DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/tourner DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/scan_echo DESTINATION lib/${PROJECT_NAME} )
-install( PROGRAMS lib_import/read_Bumper.py DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/move_robot.py DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/move_robot_simul.py DESTINATION lib/${PROJECT_NAME} )
 
