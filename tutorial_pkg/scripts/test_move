@@ -10,17 +10,12 @@ def path():
     rclpy.init()
     # Parcours à executer
     print("mv1 go")
-    move_metre(1)
-    print("mv1 fini")
-    move_degre(90)
-    print("mv2 fini")
-    move_metre(1)
-    move_degre(90)
-    move_metre(1)
-    move_degre(90)
-    move_metre(1)
-    move_degre(90)
-    stop_mov(10)
+    res=True
+    while res:
+        res=move_metre(1)
+        if res:
+            res=move_degre(90)
+
     # Clean everything and switch the light off
     rclpy.shutdown()
 
