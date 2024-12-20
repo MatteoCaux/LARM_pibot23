@@ -59,7 +59,7 @@ class CMD_ROBOTV2: #for move2
         #self._timer = rosNode.create_timer(0.5, self.timer_callback)
         self.timer_callback
     def bumper_state(self, msg):
-        if msg==1:
+        if msg:
             velocity=Twist()
             velocity.linear.x = 0 #m/s
             velocity.angular.z = 0 #rad/s

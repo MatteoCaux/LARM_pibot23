@@ -32,7 +32,10 @@ class ROSBumperListener():
     def listener_callback(self, msg):
         self._logger.info( 'I heard: ' + str(msg))
         print(msg.state)
+        rsp=Bool()
         if msg.state==1:
-            self._publisher.publish(1)
+            rsp.data=True
+            
         else:
-            self._publisher.publish(0)
+            rsp.data=True
+        self._publisher.publish(rsp)
