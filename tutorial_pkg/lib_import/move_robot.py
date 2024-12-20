@@ -3,6 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool
 from time import time
+from kobuki_ros_interfaces.msg import BumperEvent
 
 emergency_stop=False
 ###MOVE BASE FUNCTION
@@ -55,21 +56,25 @@ class CMD_ROBOTV2: #for move2
         self._vx = vx #m/s
         self._rz = rz #rad/s
         self._publisher= rosNode.create_publisher( Twist, '/multi/cmd_nav', 10 )
-        self._subscription= rosNode.create_subscription(Bool, '/com_signal/bumper',self.bumper_state, 10)
+        self._subscription1= rosNode.create_subscription(
+            BumperEvent, '/events/bumper',
+            self.bumper_state, 10
+        )
         #self._timer = rosNode.create_timer(0.5, self.timer_callback)
         self.timer_callback
     def bumper_state(self, msg):
-        if msg:
+        if msg.state==1:
             velocity=Twist()
             velocity.linear.x = 0 #m/s
             velocity.angular.z = 0 #rad/s
             self._publisher.publish(velocity)
             emergency_stop=True
     def timer_callback(self):
-        velocity=Twist()
-        velocity.linear.x = self._vx #m/s
-        velocity.angular.z = self._rz #rad/s
-        self._publisher.publish(velocity)
+        if not emergency_stop:
+            velocity=Twist()
+            velocity.linear.x = self._vx #m/s
+            velocity.angular.z = self._rz #rad/s
+            self._publisher.publish(velocity)
 
 class CMD_ROBOTV1:#for move1
     #publish the command for the duration
