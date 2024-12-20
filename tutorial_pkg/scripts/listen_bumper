@@ -1,7 +1,0 @@
-#!/usr/bin/python3
-from read_Bumper import listen
-
-if __name__ == "__main__":
-    print("listen_bumper:: START...")
-    listen()
-    print("listen finished")

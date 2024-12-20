@@ -3,7 +3,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from time import time
-from move_robot import stop_mov, move_metre, move_degre
+from move_robot_simul import stop_mov, move_metre, move_degre
 ### PATH TO EXECUTE
 def path():
      # Initialize ROS node with ROS client

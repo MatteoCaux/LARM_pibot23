@@ -14,6 +14,6 @@ launch:
     
 
 - executable:
-    cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard'
-    #cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg tourner'
+    #cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard'
+    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg test_move_simul'
     #cmd_vel:=/multi/cmd_teleop
