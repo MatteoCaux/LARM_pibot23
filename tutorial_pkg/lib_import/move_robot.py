@@ -29,12 +29,16 @@ def move2(vx,rz, duration):
 ###PRETEMPLATED MOVE FUNCTIONS  
 def move_degre(deg):# turn on himself the deg value (degres, full turn = 360), positive value : turn to the left
     deg_per_sec=0.5*180/3.14
-    duration=deg/deg_per_sec - 0.25
-    return(move2(0.0,0.5,duration))
+    duration=abs(deg/deg_per_sec) - 0.25
+    if deg<0:
+        rotation_speed=-0.5
+    else:
+        rotation_speed=0.5
+    return(move2(0.0,rotation_speed,duration))
 
 def move_metre(m): # move m meter in front of himself
-    duration=m/0.5
-    return(move2(0.5,0.0,duration))
+    duration=m/0.2
+    return(move2(0.2,0.0,duration))
 
 def stop_mov(duration): #stop the movements for a certain duration
     """
