@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+
+import pyrealsense2 as rs
+import signal, time, numpy as np
+import sys, cv2, rclpy
+from rclpy.node import Node
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
+
+
+# Realsense Node:
+class Realsense(Node):
+    def __init__(self, fps= 60):
+        super().__init__('realsense')
+        # Configure depth and color streams
+        self.pipeline = rs.pipeline()
+        self.config = rs.config()
+
+        # Get device product line for setting a supporting resolution
+        self.pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
+        self.pipeline_profile = self.config.resolve(self.pipeline_wrapper)
+        self.device = self.pipeline_profile.get_device()
+        self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
+
+        self.found_rgb = True
+        for s in self.device.sensors:
+            if s.get_info(rs.camera_info.name) == 'RGB Camera':
+                self.found_rgb = True
+
+        if not (self.found_rgb):
+            print("Depth camera required !!!")
+            exit(0)
+        
+        self.config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 60)
+        self.config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 60)
+
+        #create the publishers
+        self.image_publisher = self.create_publisher(Image, 'sensor_msgs/cam_image',10)
+        self.depth_publisher = self.create_publisher(Image, 'sensor_msgs/cam_depth',10)
+        # Start streaming
+        self.pipeline.start(self.config)
+
+    def read_imgs(self):
+        # Wait for a coherent tuple of frames: depth, color and accel
+        self.frames = self.pipeline.wait_for_frames()
+
+        self.color_frame = self.frames.first(rs.stream.color)
+        self.depth_frame = self.frames.first(rs.stream.depth)
+
+        if not (self.depth_frame and self.color_frame):
+            pass
+
+        # Convert images to numpy arrays
+        self.depth_image = np.asanyarray(self.depth_frame.get_data())
+        self.color_image = np.asanyarray(self.color_frame.get_data())
+
+        # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
+        self.depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(self.depth_image, alpha=0.03), cv2.COLORMAP_JET)
+
+        self.depth_colormap_dim = self.depth_colormap.shape
+        self.color_colormap_dim = self.color_image.shape
+
+    def publish_imgs(self):
+        self.bridge=CvBridge()
+
+        msg_image = self.bridge.cv2_to_imgmsg(self.color_image,"bgr8")
+        msg_image.header.stamp = self.get_clock().now().to_msg()
+        msg_image.header.frame_id = "image"
+        self.image_publisher.publish(msg_image)
+
+        msg_depth = self.bridge.cv2_to_imgmsg(self.depth_colormap,"bgr8")
+        msg_depth.header.stamp = msg_image.header.stamp
+        msg_depth.header.frame_id = "depth"
+        self.depth_publisher.publish(msg_depth)
+    
+    def show(self):
+        # Show images
+        images = np.hstack((self.color_image, self.depth_colormap))
+
+        # Show images
+        cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('RealSense', images)
+        cv2.waitKey(1)
+
+
+# Node processes:
+def process_img(show=False,args=None):
+    rclpy.init(args=args)
+    rsNode= Realsense()
+    while isOk:
+        rsNode.read_imgs()
+        rsNode.publish_imgs()
+        if show : 
+            rsNode.show()
+        rclpy.spin_once(rsNode, timeout_sec=0.001)
+    # Stop streaming
+    print("Ending...")
+    rsNode.pipeline.stop()
+    # Clean end
+    rsNode.destroy_node()
+    rclpy.shutdown()
+
+if __name__=="__main__":
+    # Capture ctrl-c event
+    isOk= True
+    def signalInteruption(signum, frame):
+        global isOk
+        print( "\nCtrl-c pressed" )
+        isOk= False
+
+    signal.signal(signal.SIGINT, signalInteruption)
+
+    process_img(True)
