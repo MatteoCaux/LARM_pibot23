@@ -14,55 +14,75 @@ class Realsense(Node):
         super().__init__('realsense')
         # Configure depth and color streams
         self.pipeline = rs.pipeline()
-        self.config = rs.config()
+        config = rs.config()
 
         # Get device product line for setting a supporting resolution
-        self.pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
-        self.pipeline_profile = self.config.resolve(self.pipeline_wrapper)
-        self.device = self.pipeline_profile.get_device()
-        self.device_product_line = str(self.device.get_info(rs.camera_info.product_line))
+        pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
+        pipeline_profile = config.resolve(pipeline_wrapper)
+        device = pipeline_profile.get_device()
+        device_product_line = str(device.get_info(rs.camera_info.product_line))
 
-        self.found_rgb = True
-        for s in self.device.sensors:
+        found_rgb = True
+        for s in device.sensors:
             if s.get_info(rs.camera_info.name) == 'RGB Camera':
-                self.found_rgb = True
+                found_rgb = True
 
-        if not (self.found_rgb):
+        if not (found_rgb):
             print("Depth camera required !!!")
             exit(0)
         
-        self.config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 60)
-        self.config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 60)
+        config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 60)
+        config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 60)
+        config.enable_stream(rs.stream.infrared, 1, 848, 480, rs.format.y8, 60)
+        config.enable_stream(rs.stream.infrared, 2, 848, 480, rs.format.y8, 60)
 
         #create the publishers
         self.image_publisher = self.create_publisher(Image, 'sensor_msgs/cam_image',10)
         self.depth_publisher = self.create_publisher(Image, 'sensor_msgs/cam_depth',10)
+        self.infra_publisher_1 = self.create_publisher(Image, 'sensor_msgs/infrared_1',10)
+        self.infra_publisher_2 = self.create_publisher(Image, 'sensor_msgs/infrared_2',10)
+
+        self.bridge=CvBridge()
+
         # Start streaming
-        self.pipeline.start(self.config)
+        self.pipeline.start(config)
 
     def read_imgs(self):
         # Wait for a coherent tuple of frames: depth, color and accel
-        self.frames = self.pipeline.wait_for_frames()
+        frames = self.pipeline.wait_for_frames()
 
-        self.color_frame = self.frames.first(rs.stream.color)
-        self.depth_frame = self.frames.first(rs.stream.depth)
+        color_frame = frames.first(rs.stream.color)
+        depth_frame = frames.first(rs.stream.depth)
 
-        if not (self.depth_frame and self.color_frame):
+        if not (depth_frame and color_frame):
             pass
 
         # Convert images to numpy arrays
-        self.depth_image = np.asanyarray(self.depth_frame.get_data())
-        self.color_image = np.asanyarray(self.color_frame.get_data())
+        self.depth_image = np.asanyarray(depth_frame.get_data())
+        self.color_image = np.asanyarray(color_frame.get_data())
 
         # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
         self.depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(self.depth_image, alpha=0.03), cv2.COLORMAP_JET)
+    
+    def read_infra(self):
+        # Wait for a coherent tuple of frames: depth, color and accel
+        frames = self.pipeline.wait_for_frames()
 
-        self.depth_colormap_dim = self.depth_colormap.shape
-        self.color_colormap_dim = self.color_image.shape
+        infra_frame_1 = frames.get_infrared_frame(1)
+        infra_frame_2 = frames.get_infrared_frame(2)
+
+        infra_image_1 = np.asanyarray(infra_frame_1.get_data())
+        infra_image_2 = np.asanyarray(infra_frame_2.get_data())
+
+        # Utilisation de colormap sur l'image infrared de la Realsense (image convertie en 8-bit par pixel)
+        self.infra_colormap_1 = cv2.applyColorMap(cv2.convertScaleAbs(infra_image_1, alpha=0.03), cv2.COLORMAP_JET)
+
+        # Utilisation de colormap sur l'image infrared de la Realsense (image convertie en 8-bit par pixel)
+        self.infra_colormap_2 = cv2.applyColorMap(cv2.convertScaleAbs(infra_image_2, alpha=0.03), cv2.COLORMAP_JET)
+        
+
 
     def publish_imgs(self):
-        self.bridge=CvBridge()
-
         msg_image = self.bridge.cv2_to_imgmsg(self.color_image,"bgr8")
         msg_image.header.stamp = self.get_clock().now().to_msg()
         msg_image.header.frame_id = "image"
@@ -73,9 +93,20 @@ class Realsense(Node):
         msg_depth.header.frame_id = "depth"
         self.depth_publisher.publish(msg_depth)
     
+    def publish_infra(self):
+        msg_infra = self.bridge.cv2_to_imgmsg(self.infra_colormap_1,"bgr8")
+        msg_infra.header.stamp = self.get_clock().now().to_msg()
+        msg_infra.header.frame_id = "infrared_1"
+        self.infra_publisher_1.publish(msg_infra)
+
+        msg_infra = self.bridge.cv2_to_imgmsg(self.infra_colormap_2,"bgr8")
+        msg_infra.header.stamp = msg_infra.header.stamp
+        msg_infra.header.frame_id = "infrared_2"
+        self.infra_publisher_2.publish(msg_infra)
+        
     def show(self):
         # Show images
-        images = np.hstack((self.color_image, self.depth_colormap))
+        images = np.hstack((self.color_image, self.depth_colormap,self.infra_colormap_1,self.infra_colormap_2))
 
         # Show images
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
@@ -84,12 +115,15 @@ class Realsense(Node):
 
 
 # Node processes:
-def process_img(show=False,args=None):
+def process_img(infra =False,show=False,args=None):
     rclpy.init(args=args)
     rsNode= Realsense()
     while isOk:
         rsNode.read_imgs()
         rsNode.publish_imgs()
+        if infra : 
+            rsNode.read_infra()
+            rsNode.publish_infra()
         if show : 
             rsNode.show()
         rclpy.spin_once(rsNode, timeout_sec=0.001)
@@ -110,4 +144,4 @@ if __name__=="__main__":
 
     signal.signal(signal.SIGINT, signalInteruption)
 
-    process_img(True)
+    process_img(True,True)
