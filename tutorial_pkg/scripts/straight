@@ -76,10 +76,9 @@ class StraightCtrl :
             velocity.linear.x = 0.0 #m/s
             velocity.angular.z = 0.0 #rad/s
             self._pubVelocity.publish(velocity)
-        elif self.totalmindistance<0.11:
-            message+="object to close, stopping mvmts\n"
+        elif self.totalmindistance<0.15:
+            message+="object to close, turning around\n"
             velocity.linear.x = 0.0 #m/s
-            velocity.angular.z = 0.0 #rad/s
             self._pubVelocity.publish(velocity)
         #Only rotating on himself
         elif self.obstacle_right_close or self.obstacle_left_close:
@@ -97,7 +96,7 @@ class StraightCtrl :
                 if self.previous_x>0.5:
                     velocity.linear.x=self.previous_x -0.05
                 elif self.previous_x>0.0:
-                    velocity.linear.x=self.previous_x -0.03
+                    velocity.linear.x=self.previous_x -0.02
                 else:
                     velocity.linear.x=0.0
                 
@@ -138,22 +137,23 @@ class StraightCtrl :
             if self.obstacle_right_far and not self.obstacle_left_far:
                 message+="state4:far obstacle right\n"
                 self.step =0
-                if self.previous_x>0.16:
+                if self.previous_x>0.21:
                     velocity.linear.x=self.previous_x -0.02
-                elif self.previous_x<0.14:
+                elif self.previous_x<0.19:
                     velocity.linear.x=self.previous_x +0.02
                 else:
-                    velocity.linear.x=0.15
+                    velocity.linear.x=0.2
                 velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s
             elif self.obstacle_left_far and not self.obstacle_right_far:
                 message+="state5:far obstacle left\n"
                 self.step=0
-                if self.previous_x>0.16:
+                if self.previous_x>0.21:
                     velocity.linear.x=self.previous_x -0.02
-                elif self.previous_x<0.14:
+                elif self.previous_x<0.19:
                     velocity.linear.x=self.previous_x +0.02
                 else:
-                    velocity.linear.x=0.15
+                    velocity.linear.x=0.2
+
                 velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s
             elif self.obstacle_right_far and self.obstacle_left_far:
                 message+="state6:far obstacle both directions\n"
@@ -166,12 +166,13 @@ class StraightCtrl :
 
                 if self.previous_x>0.3:
                      velocity.linear.x=self.previous_x -0.05
-                elif self.previous_x>0.12:
+                elif self.previous_x>0.17:
                     velocity.linear.x=self.previous_x -0.03
-                elif self.previous_x<0.08:
+                elif self.previous_x<0.13:
                     velocity.linear.x=self.previous_x +0.03
                 else:
-                    velocity.linear.x=0.1
+                    velocity.linear.x=0.15
+
             self._pubVelocity.publish(velocity)
             self.previous_z=velocity.angular.z
             self.previous_x=velocity.linear.x
@@ -236,7 +237,7 @@ class StraightCtrl :
             print("Scan not found, exit")
 
     def forward_smooth_accel(self):
-        velocity_array=[0.1+i*0.02 for i in range(40)]
+        velocity_array=[0.1+i*0.02 for i in range(30)]
         if self.step >= len(velocity_array):
             self.step = len(velocity_array) - 1
         velocity=Twist()
