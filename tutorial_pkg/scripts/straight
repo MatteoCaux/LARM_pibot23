@@ -6,7 +6,9 @@ from geometry_msgs.msg import Twist
 import sys
 import scan_echo
 from move_robot import stop_mov, move_metre, move_degre
+from math import sin
 
+#positive :gauche:left
 # Ros Node process:
 def main():
     # Initialize ROS and a ROS node
@@ -33,8 +35,13 @@ class StraightCtrl :
         self.obstacle_left_close=False
         self.obstacle_right_far=False
         self.obstacle_left_far=False
+        self.obstacle_full_left_far=False
+        self.obstacle_full_right_far=False
         self.no_scan=True
         self.step=0
+        self.previous_z=0.5
+        self.previous_x=0.15
+        self.previous_message=""
         # Initialize publisher:
         self._pubVelocity= rosNode.create_publisher(
             Twist, '/multi/cmd_nav', 10
@@ -52,104 +59,194 @@ class StraightCtrl :
         )
 
     def scan_callback(self, scanMsg ):
-        self._logger.info( '> get scan' )
+        #self._logger.info( '> get scan' )
         self.process_scan_data(scanMsg)
 
 
     def control_callback(self):
-        self._logger.info( '< define control' )
+        #self._logger.info( '< define control' )
+        self.states=[]
         velocity=Twist()
-        velocity.angular.z = 0.5 #rad/s
-        changMouv = 0
+        velocity.angular.z = self.previous_z #rad/s
+        base_angular_speed=0.7
+        message=""
         if self.no_scan:
             print("no scan")
             self.step = 0
             velocity.linear.x = 0.0 #m/s
             velocity.angular.z = 0.0 #rad/s
             self._pubVelocity.publish(velocity)
-        elif self.obstacle_right_close and not self.obstacle_left_close:
-            print("close obstacle right")
-            self.step = 0
-            #move_degre(-5)
+        elif self.totalmindistance<0.11:
+            message+="object to close, stopping mvmts\n"
             velocity.linear.x = 0.0 #m/s
-            velocity.angular.z = 0.5 #rad/s
+            velocity.angular.z = 0.0 #rad/s
             self._pubVelocity.publish(velocity)
-        elif self.obstacle_left_close and not self.obstacle_right_close:
-            print("close obstacle left")
-            self.step = 0
-            #move_degre(5)
-            velocity.linear.x = 0.0 #m/s
-            velocity.angular.z = -0.5 #rad/s
+        #Only rotating on himself
+        elif self.obstacle_right_close or self.obstacle_left_close:
+            if self.obstacle_right_close and self.obstacle_left_close:
+                message+="state3:close obstacle both directions\n"
+                self.step = 0
+                if self.obstacle_full_left_far and not self.obstacle_full_right_far:
+                    message+="choosed to go right"
+                    velocity.angular.z = -base_angular_speed #rad/s
+                if self.obstacle_full_right_far and not self.obstacle_full_left_far:
+                    message+="choosed to go left\n"
+                    velocity.angular.z=base_angular_speed
+                if velocity.angular.z==0:
+                    velocity.angular.z=base_angular_speed
+                if self.previous_x>0.5:
+                    velocity.linear.x=self.previous_x -0.05
+                elif self.previous_x>0.0:
+                    velocity.linear.x=self.previous_x -0.03
+                else:
+                    velocity.linear.x=0.0
+                
+            elif self.obstacle_right_close and not self.obstacle_left_close:
+                message+="state1:close obstacle right\n"
+                self.step = 0
+                if self.previous_x>0.5:
+                    velocity.linear.x=self.previous_x -0.05
+                elif self.previous_x>0.0:
+                    velocity.linear.x=self.previous_x -0.02
+                else:
+                    velocity.linear.x = 0.0 #m/s
+                if not self.obstacle_full_left_far:
+                    velocity.angular.z = base_angular_speed #rad/s
+                if velocity.angular.z==0:
+                    velocity.angular.z=base_angular_speed
+            elif self.obstacle_left_close and not self.obstacle_right_close:
+                message+="state2:close obstacle left\n"
+                self.step = 0                
+                if self.previous_x>0.5:
+                    velocity.linear.x=self.previous_x -0.05
+                elif self.previous_x>0.0:
+                    velocity.linear.x=self.previous_x -0.02
+                else:
+                    velocity.linear.x = 0.0 #m/s
+                if not self.obstacle_full_right_far:
+                    velocity.angular.z = -base_angular_speed #rad/s
+                if velocity.angular.z==0:
+                    velocity.angular.z=base_angular_speed
+            if velocity.linear.x<0.0:velocity.linear.x=0.0
+            self.previous_z=velocity.angular.z
+            self.previous_x=velocity.linear.x
             self._pubVelocity.publish(velocity)
-        elif self.obstacle_right_close and self.obstacle_left_close:
-            print("close obstacle both directions")
-            self.step = 0
-            #move_degre(5)
-            velocity.linear.x = 0.0 #m/s
+
+
+        #Rotating and moving
+        elif self.obstacle_right_far or self.obstacle_left_far:
+            if self.obstacle_right_far and not self.obstacle_left_far:
+                message+="state4:far obstacle right\n"
+                self.step =0
+                if self.previous_x>0.16:
+                    velocity.linear.x=self.previous_x -0.02
+                elif self.previous_x<0.14:
+                    velocity.linear.x=self.previous_x +0.02
+                else:
+                    velocity.linear.x=0.15
+                velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s
+            elif self.obstacle_left_far and not self.obstacle_right_far:
+                message+="state5:far obstacle left\n"
+                self.step=0
+                if self.previous_x>0.16:
+                    velocity.linear.x=self.previous_x -0.02
+                elif self.previous_x<0.14:
+                    velocity.linear.x=self.previous_x +0.02
+                else:
+                    velocity.linear.x=0.15
+                velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s
+            elif self.obstacle_right_far and self.obstacle_left_far:
+                message+="state6:far obstacle both directions\n"
+                self.step = 0
+
+                if self.obstacle_full_left_far and not self.obstacle_full_right_far:
+                    velocity.angular.z = -base_angular_speed #rad/s
+                if self.obstacle_full_right_far and not self.obstacle_full_left_far:
+                    velocity.angular.z=base_angular_speed
+
+                if self.previous_x>0.3:
+                     velocity.linear.x=self.previous_x -0.05
+                elif self.previous_x>0.12:
+                    velocity.linear.x=self.previous_x -0.03
+                elif self.previous_x<0.08:
+                    velocity.linear.x=self.previous_x +0.03
+                else:
+                    velocity.linear.x=0.1
             self._pubVelocity.publish(velocity)
-        elif self.obstacle_right_far and not self.obstacle_left_far:
-            print("far obstacle right")
-            self.step = 0
-            #move_degre(-5)
-            velocity.linear.x = 0.15 #m/s
-            velocity.angular.z = 0.5 #rad/s
-            self._pubVelocity.publish(velocity)
-        elif self.obstacle_left_far and not self.obstacle_right_far:
-            print("far obstacle left")
-            self.step = 0
-            #move_degre(5)
-            velocity.linear.x = 0.15 #m/s
-            velocity.angular.z = -0.5 #rad/s
-            self._pubVelocity.publish(velocity)
-        elif self.obstacle_right_far and self.obstacle_left_far:
-            print("far obstacle both directions")
-            self.step = 0
-            #move_degre(5)
-            velocity.linear.x = 0.1 #m/s
-            self._pubVelocity.publish(velocity)
+            self.previous_z=velocity.angular.z
+            self.previous_x=velocity.linear.x
+        #Moving forward
         else:
+            velocity.angular.z = 0.0#rad/s
             self.forward_smooth_accel()
-            print("no obstacles")
+            message+="state 0:no obstacles\n"
             self.step += 1
-        print("done")
-       
+        
+        
+        message+=str(self.obstacle_left_far)+","+str(self.obstacle_right_far)+"\n"+str(self.obstacle_left_close)+","+str(self.obstacle_right_close)+"\n"+str(self.obstacle_full_left_far)+","+str(self.obstacle_full_right_far)+"\n"+"speed:"+str(self.previous_x)+"    rotation:"+str(self.previous_z)
+
+        if True: # self.previous_message!=message:
+            print("#----------------#")
+            print(message)
+            print("|----------------|")
+        self.previous_message=message
+
     def process_scan_data(self,scanMsg):
         self.obstacle_right_close=False
         self.obstacle_left_close=False
         self.obstacle_right_far=False
         self.obstacle_left_far=False
+        self.obstacle_full_left_far=False
+        self.obstacle_full_right_far=False
+        self.totalmindistance=10
+        self.maxdistance=0
+        self.mindistance=10
+        scan_tunnel_d=0.40
         if scanMsg is not None : 
             self.no_scan=False
             angle= scanMsg.angle_min
-            for aDistance in scanMsg.ranges :
-                if 0.1 < aDistance and aDistance < 1 :
-                    if aDistance<0.5:
-                        if angle <0 and angle >-1:
-                            self.obstacle_right_close=True
-                        if angle >0 and angle <1:
-                            self.obstacle_left_close=True
-                    else:
-                        if angle <0 and angle >-1:
-                            self.obstacle_right_far=True
-                        if angle >0 and angle <1:
-                            self.obstacle_left_far=True
+            for aDistance in scanMsg.ranges :    
+                if 0.1 < aDistance:
+                    if aDistance < 1.1 :
+                        if self.totalmindistance>aDistance:self.totalmindistance=aDistance
+                        if aDistance<0.35:
+                            if angle <0 and angle >-1:
+                                self.obstacle_right_close=True
+                            if angle >0 and angle <1:
+                                self.obstacle_left_close=True
+                        else:
+                            if angle <0 and angle >-1:
+                                if scan_tunnel_d/(2*sin(-angle))>=aDistance:
+                                    self.obstacle_right_far=True
+                                    if self.maxdistance<aDistance: self.maxdistance=aDistance
+                                    if self.mindistance>aDistance: self.mindistance=aDistance   
+                            if angle >0 and angle <1:
+                                if scan_tunnel_d/(2*sin(angle))>=aDistance:
+                                    self.obstacle_left_far=True
+                                    if self.maxdistance<aDistance: self.maxdistance=aDistance
+                                    if self.mindistance>aDistance: self.mindistance=aDistance
+                    if aDistance<1.5:
+                        if angle<-1.39 and angle >-1.55:
+                            self.obstacle_full_right_far=True
+                        if angle>1.39 and angle <1.55:
+                            self.obstacle_full_left_far=True
                 angle+= scanMsg.angle_increment
         else : 
             self.no_scan=True
             print("Scan not found, exit")
 
     def forward_smooth_accel(self):
-        velocity_array=[0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.2,0.25,0.25,0.3,0.3,0.3,0.3,
-        0.35,0.35,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.45,0.45,0.5,0.5,0.5,0.5,0.5,
-        0.55,0.55,0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.6,0.65,0.65,0.65,0.7,0.7,0.7,0.7,0.7,
-        0.75,0.75,0.75,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.85,0.9,0.9,1.0]
+        velocity_array=[0.1+i*0.02 for i in range(40)]
         if self.step >= len(velocity_array):
             self.step = len(velocity_array) - 1
         velocity=Twist()
-        print(self.step)
+        #print(self.step)
         velocity.linear.x = velocity_array[self.step] #m/s
-        velocity.angular.z = 0.0#rad/s
+        self.previous_z=velocity.angular.z
+        self.previous_x=velocity.linear.x
         self._pubVelocity.publish(velocity)
+    def find_state(self):
+        return(0)
 # Go:
 if __name__ == '__main__' :
     main()
