@@ -16,8 +16,7 @@ find_package(ament_cmake REQUIRED)
 install( PROGRAMS lib_import/move_robot.py DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/move_robot_simul.py DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS lib_import/scan_echo.py DESTINATION lib/${PROJECT_NAME} )
-install( PROGRAMS scripts/straight DESTINATION lib/${PROJECT_NAME} )
-install( PROGRAMS scripts/pathfinding_simulation DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS scripts/pathfinding DESTINATION lib/${PROJECT_NAME} )
 
 # Install resource files.
 install(DIRECTORY
