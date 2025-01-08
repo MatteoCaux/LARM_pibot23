@@ -5,7 +5,6 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 import sys
 import scan_echo
-from move_robot import stop_mov, move_metre, move_degre
 from math import sin
 
 #positive :gauche:left
@@ -14,6 +13,21 @@ def main():
     # Initialize ROS and a ROS node
     rclpy.init(args=sys.argv)
     node= Node( 'basic_move' )
+    node.declare_parameter('is_simulation',False)
+    node.declare_parameter('tunnel_vision_width',0.40)
+
+    #Check if simulation
+    global cmd_robot_topic,scan_robot_topic,tunnel_vision_width
+    is_simulation=node.get_parameter('is_simulation').value
+    tunnel_vision_width=node.get_parameter('tunnel_vision_width').value
+   
+    if not is_simulation:
+        from move_robot import stop_mov, move_metre, move_degre
+        cmd_robot_topic='/multi/cmd_nav'
+        scan_robot_topic='/scan'
+    else:
+        cmd_robot_topic='/cmd_vel'
+        scan_robot_topic='/base_scan'
 
     # Initialize our control:
     control= StraightCtrl()
@@ -42,14 +56,17 @@ class StraightCtrl :
         self.previous_z=0.5
         self.previous_x=0.15
         self.previous_message=""
+        self.cmd_robot_topic=''
+        self.scan_robot_topic=''
         # Initialize publisher:
+        print(cmd_robot_topic)
         self._pubVelocity= rosNode.create_publisher(
-            Twist, '/multi/cmd_nav', 10
+            Twist, cmd_robot_topic, 10
         )
 
         # Initialize scan callback:
         self._subToScan= rosNode.create_subscription(
-            LaserScan, '/scan',
+            LaserScan,scan_robot_topic ,
             self.scan_callback, 10
         )
 
@@ -276,7 +293,7 @@ class StraightCtrl :
         self.mindistance=10
 
         # The robot looks in a 40cm tunnel in front of him
-        scan_tunnel_d=0.40
+        scan_tunnel_d=tunnel_vision_width
 
         if scanMsg is not None : 
             self.no_scan=False
