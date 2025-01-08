@@ -11,7 +11,6 @@ launch:
     name: "rviz2"
     args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_config_robot.rviz"
     
-
 - executable:
-    #cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard cmd_vel:=/multi/cmd_teleop'
-    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg straight'
+    #cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard' # cmd_vel:=/multi/cmd_teleop
+    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg pathfinding_simulation'
