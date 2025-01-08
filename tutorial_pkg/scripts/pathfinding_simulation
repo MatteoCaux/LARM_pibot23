@@ -44,12 +44,12 @@ class StraightCtrl :
         self.previous_message=""
         # Initialize publisher:
         self._pubVelocity= rosNode.create_publisher(
-            Twist, '/multi/cmd_nav', 10
+            Twist, '/cmd_vel', 10
         )
 
         # Initialize scan callback:
         self._subToScan= rosNode.create_subscription(
-            LaserScan, '/scan',
+            LaserScan, '/base_scan',
             self.scan_callback, 10
         )
 
