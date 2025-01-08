@@ -11,10 +11,15 @@ launch:
 #    name: "rviz2"
 #    args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_simulation.rviz"
 
-- node:
-    pkg: "tutorial_pkg"
-    exec: "pathfinding"
-    name: "pathfinding_node"
-    param:
-    - { name: "is_simulation", value: True }
-    - { name: "tunnel_vision_width", value: 0.5 }
+#- node:
+#    pkg: "tutorial_pkg"
+#    exec: "pathfinding"
+#    name: "pathfinding_node"
+#    param:
+#    - { name: "is_simulation", value: True }
+#    - { name: "tunnel_vision_width", value: 0.5 }
+
+- executable:
+ 
+    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg pathfinding --ros-args -p is_simulation:=True -p tunnel_vision_width:=0.5'
+
