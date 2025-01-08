@@ -92,7 +92,6 @@ class StraightCtrl :
         #=================================#
         # Third case : something is close #
         #=================================#
-
         elif self.obstacle_right_close or self.obstacle_left_close:                     #something is close
             #We look at the situation (where are the obstacles) and we choose where to move
 
@@ -166,22 +165,18 @@ class StraightCtrl :
             #publishing
             self._pubVelocity.publish(velocity)
 
-
-        #Rotating and moving
+        #================================#
+        # Fourth case : something is far #
+        #================================#
         elif self.obstacle_right_far or self.obstacle_left_far:
+            #We look at the situation (where are the obstacles) and we choose where to move
+
+            # 1) something is far on the right but not on the left  
             if self.obstacle_right_far and not self.obstacle_left_far:
                 message+="state4:far obstacle right\n"
                 self.step =0
-                if self.previous_x>0.21:
-                    velocity.linear.x=self.previous_x -0.02
-                elif self.previous_x<0.19:
-                    velocity.linear.x=self.previous_x +0.02
-                else:
-                    velocity.linear.x=0.2
-                velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s
-            elif self.obstacle_left_far and not self.obstacle_right_far:
-                message+="state5:far obstacle left\n"
-                self.step=0
+
+                #the robot goes to the linear speed of 0.2 smoothly
                 if self.previous_x>0.21:
                     velocity.linear.x=self.previous_x -0.02
                 elif self.previous_x<0.19:
@@ -189,16 +184,39 @@ class StraightCtrl :
                 else:
                     velocity.linear.x=0.2
 
-                velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s
+                #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
+                velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s                    the robot goes to the left
+  
+            # 2) something is far on the left but not on the right  
+            elif self.obstacle_left_far and not self.obstacle_right_far:
+                message+="state5:far obstacle left\n"
+                self.step=0
+
+                #the robot goes to the linear speed of 0.2 smoothly
+                if self.previous_x>0.21:
+                    velocity.linear.x=self.previous_x -0.02
+                elif self.previous_x<0.19:
+                    velocity.linear.x=self.previous_x +0.02
+                else:
+                    velocity.linear.x=0.2
+
+                #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
+                velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s                   the robot goes to the right
+
+            # 3) something is far both on the right and the left
             elif self.obstacle_right_far and self.obstacle_left_far:
                 message+="state6:far obstacle both directions\n"
                 self.step = 0
 
+                #there is something at 90 degres on the left and not on the right
                 if self.obstacle_full_left_far and not self.obstacle_full_right_far:
-                    velocity.angular.z = -base_angular_speed #rad/s
+                    velocity.angular.z = -base_angular_speed #rad/s                           the robot goes to the right
+                
+                #there is something at 90 degres on the right and not on the left
                 if self.obstacle_full_right_far and not self.obstacle_full_left_far:
-                    velocity.angular.z=base_angular_speed
+                    velocity.angular.z=base_angular_speed #rad/s                               the robot goes to the left
 
+                #the robot goes to the linear speed of 0.15 smoothly
                 if self.previous_x>0.3:
                      velocity.linear.x=self.previous_x -0.05
                 elif self.previous_x>0.17:
@@ -208,26 +226,45 @@ class StraightCtrl :
                 else:
                     velocity.linear.x=0.15
 
-            self._pubVelocity.publish(velocity)
+            #previous values
             self.previous_z=velocity.angular.z
             self.previous_x=velocity.linear.x
-        #Moving forward
+
+            #publishing
+            self._pubVelocity.publish(velocity)
+
+
+        #===================================#
+        # Fifth case : no obstacle in front #
+        #===================================#
         else:
+            #the robot goes forward
+
             velocity.angular.z = 0.0#rad/s
             self.forward_smooth_accel()
             message+="state 0:no obstacles\n"
             self.step += 1
         
         
+        #=============================#
+        # Print the current situation #
+        #=============================#
+        #printing if there are obstacles and where and the current linear and rotative speeds
         message+=str(self.obstacle_left_far)+","+str(self.obstacle_right_far)+"\n"+str(self.obstacle_left_close)+","+str(self.obstacle_right_close)+"\n"+str(self.obstacle_full_left_far)+","+str(self.obstacle_full_right_far)+"\n"+"speed:"+str(self.previous_x)+"    rotation:"+str(self.previous_z)
 
+        #the message is printed only if it is different from the previous one
         if True: # self.previous_message!=message:
             print("#----------------#")
             print(message)
             print("|----------------|")
         self.previous_message=message
 
+
+    #================================================================#
+    # Definition of the position of the obstacle from the LIDAR data #
+    #================================================================#
     def process_scan_data(self,scanMsg):
+        #Initialization
         self.obstacle_right_close=False
         self.obstacle_left_close=False
         self.obstacle_right_far=False
@@ -237,11 +274,16 @@ class StraightCtrl :
         self.totalmindistance=10
         self.maxdistance=0
         self.mindistance=10
+
+        # The robot looks in a 40cm tunnel in front of him
         scan_tunnel_d=0.40
+
         if scanMsg is not None : 
             self.no_scan=False
             angle= scanMsg.angle_min
-            for aDistance in scanMsg.ranges :    
+            for aDistance in scanMsg.ranges :
+
+                #for each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)    
                 if 0.1 < aDistance:
                     if aDistance < 1.1 :
                         if self.totalmindistance>aDistance:self.totalmindistance=aDistance
@@ -261,6 +303,8 @@ class StraightCtrl :
                                     self.obstacle_left_far=True
                                     if self.maxdistance<aDistance: self.maxdistance=aDistance
                                     if self.mindistance>aDistance: self.mindistance=aDistance
+
+                    #we also look if there are obstacles at 90 degres on each side of the robot
                     if aDistance<1.5:
                         if angle<-1.39 and angle >-1.55:
                             self.obstacle_full_right_far=True
@@ -271,6 +315,7 @@ class StraightCtrl :
             self.no_scan=True
             print("Scan not found, exit")
 
+    #the robot accelerate smoothly
     def forward_smooth_accel(self):
         velocity_array=[0.1+i*0.02 for i in range(30)]
         if self.step >= len(velocity_array):
