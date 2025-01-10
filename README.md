@@ -35,6 +35,10 @@ Les éléments suivants doivent être installés pour pouvoir faire fonctionner 
     * opencv-python
     * pyrealsense2
     * cvbridge3
+  
+  il faut ajouter remappings=[('/base_scan','/scan')]
+  a la fin du launch file du stage, dans Launchdescription dans le Node
+  path :ros_space/src/pkg-stage/stage_ros2/launch/stage.launch.py
 </br>
 
 > Commande :  
