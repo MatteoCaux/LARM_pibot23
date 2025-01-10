@@ -12,7 +12,7 @@ launch:
     args: "-d $(find-pkg-share grp_pibot23)/rviz/rviz_simulation.rviz"
 
 #- node:
-#    pkg: "tutorial_pkg"
+#    pkg: "grp_pibot23"
 #    exec: "pathfinding"
 #    name: "pathfinding_node"
 #    param:

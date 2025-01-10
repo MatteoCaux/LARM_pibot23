@@ -32,7 +32,7 @@ def main():
         scan_robot_topic='/scan'
     else:
         cmd_robot_topic='/cmd_vel'
-        scan_robot_topic='/base_scan'
+        scan_robot_topic='/scan'
 
     # Initialize our control:
     control= StraightCtrl()

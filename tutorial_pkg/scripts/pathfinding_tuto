@@ -26,8 +26,8 @@ def main():
     time_step_random_turn=node.get_parameter('time_step_random_turn').value
 
     if not is_simulation:
-        global WheelDropEvent
-        from kobuki_ros_interfaces.msg import WheelDropEvent
+        global WheelDropEvent, ButtonEvent
+        from kobuki_ros_interfaces.msg import WheelDropEvent, ButtonEvent
         cmd_robot_topic='/multi/cmd_nav'
         scan_robot_topic='/scan'
     else:
@@ -74,6 +74,7 @@ class StraightCtrl :
             self.scan_callback, 10
         )
         if not is_simulation:
+            self.sub_bouton=rosNode.create_subscription(ButtonEvent,'events/button',self.button,10)
             self._subToWheelDrop= rosNode.create_subscription(
                 WheelDropEvent, '/events/wheel_drop',
                 self.wheel_drop, 10
@@ -87,31 +88,30 @@ class StraightCtrl :
         )
 
     def random_turn(self):
-        velocity=Twist()
-        self.random_turning=True
-        direction=rd.randint(1,2)
-        angle_value=rd.randint(30,180)
-        if direction==1:angle=-angle_value
-        if direction==2:angle=angle_value
-        print("je commence l'op")
-        while self.previous_x>0.0:
-            velocity.linear.x=self.smooth_speed_target(0.0,0.03)
-            self.previous_x=velocity.linear.x
-            self._pubVelocity.publish(velocity)
-            print("ralentir")
-        print("je tourne de "+str(angle)+" deg")
-        self.turn_by_given_angle(angle,0.7)
-        print("j'ai fini de tourner")
-        while self.previous_x<0.1:  
-            velocity.linear.x=self.smooth_speed_target(0.5,0.02)
-            self.previous_x=velocity.linear.x
-            self._pubVelocity.publish(velocity)
-            print('avancer')
-        print("j'ai fini l'op")
-
-
-
-        self.random_turning=False
+        if  not self._emergency_stop:
+            velocity=Twist()
+            self.random_turning=True
+            direction=rd.randint(1,2)
+            angle_value=rd.randint(30,180)
+            if direction==1:angle=-angle_value
+            if direction==2:angle=angle_value
+            print("je commence l'op")
+            while self.previous_x>0.0 and not self._emergency_stop:
+                velocity.linear.x=self.smooth_speed_target(0.0,0.03)
+                self.previous_x=velocity.linear.x
+                self._pubVelocity.publish(velocity)
+                print("ralentir")
+            print("je tourne de "+str(angle)+" deg")
+            self.turn_by_given_angle(angle,0.7)
+            print("j'ai fini de tourner")
+            while self.previous_x<0.1 and not self._emergency_stop:
+                velocity.linear.x=self.smooth_speed_target(0.5,0.02)
+                self.previous_x=velocity.linear.x
+                self._pubVelocity.publish(velocity)
+                print('avancer')
+            print("j'ai fini l'op")
+            self.random_turning=False
+    
     def scan_callback(self, scanMsg ):
         #self._logger.info( '> get scan' )
         self.process_scan_data(scanMsg)
@@ -138,7 +138,7 @@ class StraightCtrl :
             elif self.totalmindistance<0.15:                                                #if an object is too close, the robot can only rotate on itself
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
-                velocity.angular.z  = -self.previous_z
+                velocity.angular.z  = 0.5
                 self._pubVelocity.publish(velocity)
             #=================================#
             # Third case : something is close #
@@ -372,14 +372,19 @@ class StraightCtrl :
             self._pubVelocity.publish(velocity)
 
     def wheel_drop(self,msg):
-        if msg.state==0:
-            self._emergency_stop=False
+        # if msg.state==0:
+        #     self._emergency_stop=False
         if msg.state==1:
             velocity=Twist()
             velocity.linear.x = 0.0 #m/s
             velocity.angular.z = 0.0 #rad/s
-            self._publisher.publish(velocity)
+            self._pubVelocity.publish(velocity)
             self._emergency_stop=True
+
+    def button(self,msg):
+        if msg.state == 1:
+            self._emergency_stop=False
+
         
 
 # Go:
