@@ -1,0 +1,24 @@
+launch:
+
+- node:
+    pkg: "rviz2"
+    exec: "rviz2"
+    name: "rviz2"
+    args: "-d $(find-pkg-share grp_pibot23)/rviz/rviz_tbot.rviz"
+
+- node:
+    pkg: "grp_pibot23"
+    exec: "vision_robot"
+    name: "vision_robot"
+    
+# - node:
+#    pkg: "grp_pibot23"
+#    exec: "pathfinding"
+#    name: "pathfinding_node"
+#    param:
+#    - { name: "is_simulation", value: False }
+#    - { name: "tunnel_vision_width", value: 0.5 }
+
+
+# - executable:
+#     cmd: gnome-terminal --tab -e 'ros2 run grp_pibot23 pathfinding --ros-args -p is_simulation:=False -p tunnel_vision_width:=0.5'

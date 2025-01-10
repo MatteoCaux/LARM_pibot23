@@ -1,0 +1,25 @@
+launch:
+
+- node:
+    pkg: "rviz2"
+    exec: "rviz2"
+    name: "rviz2"
+    args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_tbot.rviz"
+
+- node:
+    pkg: "tuto_vision"
+    exec: "vision_robot"
+    name: "vision_robot"
+    
+#- node:
+#    pkg: "tutorial_pkg"
+#    exec: "pathfinding"
+#    name: "pathfinding_node"
+#    param:
+#    - { name: "is_simulation", value: False }
+#    - { name: "tunnel_vision_width", value: 0.5 }
+
+
+- executable:
+    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg pathfinding --ros-args -p is_simulation:=False -p tunnel_vision_width:=0.5'
+    cmd: gnome-terminal --tab -e 'ros2 topic echo /sensor_msgs/detection'

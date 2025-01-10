@@ -16,15 +16,10 @@ Ce répertoire est un package ROS2 pour le contrôle d'un robot Kobuki.
   - [Elément requis](#elément-requis)
   - [Configuration](#configuration)
   - [Installation des packages](#installation-des-packages)
-  - [Build the packages](#build-the-packages)
+  - [Build des packages](#build-des-packages)
 - [Challenge 1](#challenge-1)
   - [Objectifs](#objectifs)
   - [Lancement du challenge 1](#lancement-du-challenge-1)
-- [Challenge 2](#challenge-2)
-  - [Objectifs](#objectifs-1)
-  - [Notre méthode de résolution](#notre-méthode-de-résolution)
-  - [Détails des fichiers](#détails-des-fichiers)
-  - [Lancement du challenge 2](#lancement-du-challenge-2)
 
 
 ## Installation
@@ -61,7 +56,7 @@ source ~/ros_space/install/local_setup.bash
 1. Cloner ce répertoire : `git clone https://github.com/MatteoCaux/LARM_pibot23.git`
 
 
-### Build the packages
+### Build des packages
 Dans le ROS2 workspace, il faut build les packages:
 - `./pkg-tbot/bin/install`
 - `colcon build`
@@ -79,13 +74,3 @@ L'objectif du challenge 1 est de parcourir entièrement une zone fermée en évi
 Pour le challenge 1, vous pouvez : 
 - Lancer le fichier `simulation_v1_launch.yaml` pour la partie simulation : `ros2 launch tutorial_pkg simulation_v1_launch.yaml`
 - Lancer le fichier `tbot_v1_launch.yaml` pour la partie réelle : `ros2 launch tutorial_pkg tbot_v1_launch.yaml`
-
-## Challenge 2
-
-### Objectifs
-
-### Notre méthode de résolution
-
-### Détails des fichiers
-
-### Lancement du challenge 2

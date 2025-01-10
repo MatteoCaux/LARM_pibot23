@@ -124,6 +124,7 @@ class Realsense(Node):
 
         self.res2_vert = cv2.cvtColor(cv2.bitwise_and(self.color_image,self.color_image,mask=self.closing),cv2.COLOR_HSV2BGR)
 
+
     def contours(self):
         self.filtre_vert()
         contours=cv2.findContours(self.closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
@@ -149,6 +150,7 @@ class Realsense(Node):
                     self.flag = 1
                     #cv2.circle(self.res2_vert, (int(x), int(y)), int(rayon), (0,0,255), 2)
                     cv2.rectangle(self.color_image, coin, (coin[0]+largeur, coin[1]+hauteur),(0,0,255), 2)
+                    cv2.putText(self.color_image, "Objet trouve", (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (0,0,255), 1, cv2.LINE_AA)
             if nb_contours ==0 :
                 self.flag = 0
             
@@ -171,8 +173,8 @@ def process_img(infra =False,show=False,args=None):
     rsNode= Realsense()
     while isOk:
         rsNode.read_imgs()
-        rsNode.publish_imgs()
         rsNode.contours()
+        rsNode.publish_imgs()
         if infra : 
             rsNode.read_infra()
             rsNode.publish_infra()
