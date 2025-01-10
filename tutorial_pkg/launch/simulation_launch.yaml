@@ -13,7 +13,7 @@ launch:
 
 #- node:
 #    pkg: "tutorial_pkg"
-#    exec: "pathfinding"
+#    exec: "pathfinding_tuto"
 #    name: "pathfinding_node"
 #    param:
 #    - { name: "is_simulation", value: True }
@@ -21,5 +21,5 @@ launch:
 
 - executable:
  
-    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg pathfinding --ros-args -p is_simulation:=True -p tunnel_vision_width:=0.5'
+    cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg pathfinding_tuto --ros-args -p is_simulation:=True -p tunnel_vision_width:=0.5'
 
