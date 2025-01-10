@@ -2,15 +2,15 @@ import cv2
 import pyrealsense2 as rs
 import numpy as np
 import matplotlib.pyplot as plt
-from skimage.measure import label, regionprops
+# from skimage.measure import label, regionprops
 import math
 
 def filtre_vert(image_couleur):
     hsv = cv2.cvtColor(image_couleur, cv2.COLOR_BGR2HSV)
     
     #min et max du vert
-    min_vert = np.array([50,80,80])
-    max_vert = np.array([75,165,165])
+    min_vert = np.array([50,95,95])
+    max_vert = np.array([75,180,180])
 
     mask_vert=cv2.inRange(hsv,min_vert,max_vert)
     mask_vert = cv2.GaussianBlur(mask_vert,(11,11),0)
