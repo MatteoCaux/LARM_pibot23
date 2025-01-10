@@ -11,13 +11,13 @@ launch:
     exec: "vision_robot"
     name: "vision_robot"
     
-# - node:
-#    pkg: "grp_pibot23"
-#    exec: "pathfinding"
-#    name: "pathfinding_node"
-#    param:
-#    - { name: "is_simulation", value: False }
-#    - { name: "tunnel_vision_width", value: 0.5 }
+- node:
+   pkg: "grp_pibot23"
+   exec: "pathfinding"
+   name: "pathfinding_node"
+   param:
+   - { name: "is_simulation", value: False }
+   - { name: "tunnel_vision_width", value: 0.5 }
 
 
 # - executable:
