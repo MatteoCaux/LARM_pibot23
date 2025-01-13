@@ -47,7 +47,7 @@ def main():
 
 # Ros Node Class:
 class StraightCtrl :
-    def initializeRosNode(self, rosNode ):                                            #initialization
+    def initializeRosNode(self, rosNode ):                                                 #initialization
         # Get logger from the node:
         self._logger= rosNode.get_logger()
         self.obstacle_right_close=False
@@ -87,12 +87,13 @@ class StraightCtrl :
             time_step_random_turn, self.random_turn
         )
 
+    # function allowing the robot to do a random turn
     def random_turn(self):
         if  not self._emergency_stop:
             velocity=Twist()
-            self.random_turning=True
-            direction=rd.randint(1,2)
-            angle_value=rd.randint(30,180)
+            self.random_turning=True                                                       #a random turn is ongoing
+            direction=rd.randint(1,2)                                                      #a random direction between right and lrft is chosen
+            angle_value=rd.randint(30,180)                                                 #a random angle is chosen
             if direction==1:angle=-angle_value
             if direction==2:angle=angle_value
             print("je commence l'op")
@@ -127,7 +128,7 @@ class StraightCtrl :
             #=================================#
             # First case : nothing is scanned #
             #=================================#
-            if self.no_scan or self._emergency_stop:                                                               #if nothing is scanned, the robot stop
+            if self.no_scan or self._emergency_stop:                                       #if nothing is scanned, the robot stop
                 print("no scan/emergency stop")
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z = 0.0 #rad/s
@@ -135,7 +136,7 @@ class StraightCtrl :
             #======================================#
             # Second case : something is too close #
             #======================================#
-            elif self.totalmindistance<0.15:                                                #if an object is too close, the robot can only rotate on itself
+            elif self.totalmindistance<0.15:                                               #if an object is too close, the robot can only rotate on itself
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z  = -self.previous_z
@@ -143,7 +144,7 @@ class StraightCtrl :
             #=================================#
             # Third case : something is close #
             #=================================#
-            elif self.obstacle_right_close or self.obstacle_left_close:                     #something is close
+            elif self.obstacle_right_close or self.obstacle_left_close:                    #something is close
                 #We look at the situation (where are the obstacles) and we choose where to move
 
                 # 1) something is close both on the right and on the left
@@ -171,7 +172,7 @@ class StraightCtrl :
                     velocity.linear.x=self.smooth_speed_target(0.0,0.02)
 
                     #is there something far on the left ?    
-                    if not self.obstacle_full_left_far:                                      #if not the robot turn to the left
+                    if not self.obstacle_full_left_far:                                     #if not the robot turn to the left
                         velocity.angular.z = base_angular_speed #rad/s
                     if velocity.angular.z==0:
                         velocity.angular.z=base_angular_speed
@@ -184,12 +185,12 @@ class StraightCtrl :
                     velocity.linear.x=self.smooth_speed_target(0.0,0.02)
 
                     #is there something far on the right ?     
-                    if not self.obstacle_full_right_far:                                     #if not the robot turn to the right
+                    if not self.obstacle_full_right_far:                                    #if not the robot turn to the right
                         velocity.angular.z = -base_angular_speed #rad/s
                     if velocity.angular.z==0:
                         velocity.angular.z=base_angular_speed
 
-                if velocity.linear.x<0.0:velocity.linear.x=0.0                               #avoiding errors
+                if velocity.linear.x<0.0:velocity.linear.x=0.0                              #avoiding errors
 
                 #previous values
                 self.previous_z=velocity.angular.z
@@ -212,7 +213,7 @@ class StraightCtrl :
                     velocity.linear.x=self.smooth_speed_target(0.2,0.02)
 
                     #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                    velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s                    the robot goes to the left
+                    velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s                the robot goes to the left
     
                 # 2) something is far on the left but not on the right  
                 elif self.obstacle_left_far and not self.obstacle_right_far:
@@ -222,7 +223,7 @@ class StraightCtrl :
                     velocity.linear.x=self.smooth_speed_target(0.2,0.02)
 
                     #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                    velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s                   the robot goes to the right
+                    velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s             the robot goes to the right
 
                 # 3) something is far both on the right and the left
                 
@@ -231,23 +232,20 @@ class StraightCtrl :
 
                     #there is something at 90 degres on the left and not on the right
                     if self.obstacle_full_left_far and not self.obstacle_full_right_far:
-                        velocity.angular.z = -base_angular_speed #rad/s                            the robot goes to the right
+                        velocity.angular.z = -base_angular_speed #rad/s                    the robot goes to the right
                     
                     #there is something at 90 degres on the right and not on the left
                     if self.obstacle_full_right_far and not self.obstacle_full_left_far:
-                        velocity.angular.z=base_angular_speed #rad/s                               the robot goes to the left
+                        velocity.angular.z=base_angular_speed #rad/s                       the robot goes to the left
 
                     #there is something at 90 degres on the right and the left
                     if self.obstacle_full_right_far and self.obstacle_full_left_far:
                         if self.full_right_min<self.full_left_min:
-                            velocity.angular.z=base_angular_speed #rad/s                           the robot goes to the left
+                            velocity.angular.z=base_angular_speed #rad/s                   the robot goes to the left
                         else:
-                            velocity.angular.z = -base_angular_speed #rad/s                        the robot goes to the right
+                            velocity.angular.z = -base_angular_speed #rad/s                the robot goes to the right
                     velocity.linear.x=self.smooth_speed_target(0.15,0.03)
-
-                        #a finir
-                    #the robot goes to the linear speed of 0.15 smoothly
-                    
+                   
 
                 #previous values
                 self.previous_z=velocity.angular.z
@@ -269,6 +267,7 @@ class StraightCtrl :
                 self.previous_x=velocity.linear.x
                 #publishing
                 self._pubVelocity.publish(velocity)
+
             #=============================#
             # Print the current situation #
             #=============================#
@@ -341,29 +340,32 @@ class StraightCtrl :
             self.no_scan=True
             print("Scan not found, exit")
 
+
+    # Function allowing the robot to reach smoothly a linear speed target
     def smooth_speed_target(self,target:float,step:float):
         velocity=Twist()
-        if self.previous_x>target+15*step:                                          #if the robot was moving fast, it slows hardly
+        if self.previous_x>target+15*step:                                                #if the robot was moving fast, it slows hardly
             velocity.linear.x=self.previous_x -step*2
-        elif self.previous_x>target+step:                                            #if the robot was moving slow, its slow softly
+        elif self.previous_x>target+step:                                                 #if the robot was moving slow, its slow softly
             velocity.linear.x=self.previous_x -step
         elif self.previous_x<target-step:
             velocity.linear.x=self.previous_x +step
-        else:                                                                   #if the robot was not moving, it continue
+        else:                                                                             #if the robot was not moving, it continue
             velocity.linear.x=target
         return(velocity.linear.x)
 
+    # Function to compute and execute a rotation given an angle
     def turn_by_given_angle(self,deg,angular_speed):
         velocity=Twist()
         deg_per_sec=angular_speed*180/3.14
-        duration=abs(deg/deg_per_sec) - 0.25
+        duration=abs(deg/deg_per_sec) - 0.25                                              #computation of the duration of the rotation needed to reach the target angle
         if deg<0:
             rotation_speed=-angular_speed
         else:
             rotation_speed=angular_speed
         start = time()
         counter=0
-        while counter < duration and not self._emergency_stop: 
+        while counter < duration and not self._emergency_stop:                            #rotation until the end of the duration if no emergency stop
             velocity.angular.z = rotation_speed
             counter = time()-start
             #Previous values
@@ -371,6 +373,7 @@ class StraightCtrl :
             #Publish
             self._pubVelocity.publish(velocity)
 
+    #function that cause the robot to stop if it is lifted
     def wheel_drop(self,msg):
         # if msg.state==0:
         #     self._emergency_stop=False
@@ -379,11 +382,11 @@ class StraightCtrl :
             velocity.linear.x = 0.0 #m/s
             velocity.angular.z = 0.0 #rad/s
             self._pubVelocity.publish(velocity)
-            self._emergency_stop=True
+            self._emergency_stop=True                                                    #the variable emergency stop is set to true until a button is pushed on the robot
 
     def button(self,msg):
         if msg.state == 1:
-            self._emergency_stop=False
+            self._emergency_stop=False                                                   #when a button is pushed, the emergency stop is restart and the robot can move again
 
         
 
