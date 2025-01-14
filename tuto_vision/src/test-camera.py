@@ -16,20 +16,6 @@ config = rs.config()
 # Get device product line for setting a supporting resolution
 pipeline_wrapper = rs.pipeline_wrapper(pipeline)
 pipeline_profile = config.resolve(pipeline_wrapper)
-device = pipeline_profile.get_device()
-device_product_line = str(device.get_info(rs.camera_info.product_line))
-
-print( f"Connect: {device_product_line}" )
-found_rgb = True
-for s in device.sensors:
-    print( "Name:" + s.get_info(rs.camera_info.name) )
-    if s.get_info(rs.camera_info.name) == 'RGB Camera':
-        found_rgb = True
-
-if not (found_rgb):
-    print("Depth camera equired !!!")
-    exit(0)
-
 config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 60)
 config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 60)
 
@@ -42,8 +28,12 @@ def signalInteruption(signum, frame):
 
 signal.signal(signal.SIGINT, signalInteruption)
 
+
 # Start streaming
 pipeline.start(config)
+
+align_to = rs.stream.depth
+align = rs.align(align_to)
 
 count= 1
 refTime= time.process_time()
