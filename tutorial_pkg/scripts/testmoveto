@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+import rclpy
+from  rclpy.node import Node
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist,Pose
+import sys
+from math import sin,atan
+from time import time,sleep
+import random as rd
+
+
+localGoal=Pose()
+localGoal.position.x=10
+localGoal.position.y=-10
+print(localGoal)
+theta=atan(localGoal.position.y/localGoal.position.x)
+print(theta)

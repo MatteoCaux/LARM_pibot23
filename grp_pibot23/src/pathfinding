@@ -188,7 +188,7 @@ class StraightCtrl :
                     if not self.obstacle_full_right_far:                                    #if not the robot turn to the right
                         velocity.angular.z = -base_angular_speed #rad/s
                     if velocity.angular.z==0:
-                        velocity.angular.z=base_angular_speed
+                        velocity.angular.z=-base_angular_speed
 
                 if velocity.linear.x<0.0:velocity.linear.x=0.0                              #avoiding errors
 

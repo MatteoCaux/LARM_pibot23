@@ -5,22 +5,29 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist,Pose
 import sys
 import scan_echo
-import tf_conversions
 import tf2_ros
 import turtlesim.msg
-
+import tf2_geometry_msgs
+def main():
+    rclpy.init()
+    localGoalNode= localGoal()
+    # Start infinite loop
+    rclpy.spin(localGoalNode)
+    # Clean everything and switch the light off
+    aNode.destroy_node()
+    rclpy.shutdown()
 
 # on transforme une position dans 'odom' en une position dans 'base_link' (ca sera une position map in fine)
 class localGoal(Node):
     def __init__(self):
-        super().__init__('localgoal')
-
+        super().__init__('localgoalTF')
+        self.global_goal=Pose()
         #Pubs
-        self._pubLocalPose= rosNode.create_publisher(
+        self._pubLocalPose= self.create_publisher(
             Pose, "/moveto/localgoal", 10
         )
         #Subs
-        self._subToGoalPose= rosNode.create_subscription(
+        self._subToGoalPose= self.create_subscription(
                 Pose, '/moveto/globalgoal',
                 self.global_goal_listen, 10
             )
@@ -34,7 +41,6 @@ class localGoal(Node):
 
     #Subs calls
     def global_goal_listen(self,msg):
-        self.global_goal=Pose()
         self.global_goal=msg
 
     #Process funcs
@@ -43,18 +49,20 @@ class localGoal(Node):
         # Get Transformation
         try:
             stampedTransform= self.tf_buffer.lookup_transform(
-                        self.local_frame,
                         'odom',
+                        self.local_frame,
                         currentTime)
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):TransformException as tex:
-            self._node.get_logger().info( f'Could not transform the goal into {self.local_frame}: {tex}')
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as tex: #:TransformException
+            self.get_logger().info( f'Could not transform the goal into {self.local_frame}: {tex}')
             return
         # Compute goal into local coordinates
         localGoal = tf2_geometry_msgs.do_transform_pose( self.global_goal, stampedTransform )
         #localGoal.position.x = 0.0
         #localGoal.orientation.x = 0.0
         #tf2_geometry_msgs.do_transform_pose( self.global_goal, localGoal, stampedTransform )
+        self._pubLocalPose.publish(localGoal)
 
 
 if __name__ == '__main__':
-    globalnode=localGoal()
+    main()
+    

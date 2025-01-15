@@ -5,7 +5,7 @@ launch:
 - include:
     file: "$(find-pkg-share stage_ros2)/launch/stage.launch.py"
 
-#- node:
+# - node:
 #    pkg: "rviz2"
 #    exec: "rviz2"
 #    name: "rviz2"
