@@ -1,2 +1,5 @@
 CMakeLists.xml
 vcpkg
+tuto_vision/img
+tuto_vision/img_crop
+tuto_vision/template

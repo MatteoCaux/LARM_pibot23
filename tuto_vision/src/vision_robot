@@ -45,7 +45,11 @@ class Realsense(Node):
         self.bridge=CvBridge()
 
         # Start streaming
-        self.pipeline.start(config)
+        profile = self.pipeline.start(config)
+
+        # get stream profile adn camera intrinsics
+        color_profile = rs.video_stream_profile(profile.get_stream(rs.stream.color))
+        self.color_intrinsics = color_profile.get_intrinsics()
 
         align_to = rs.stream.depth
         self.align = rs.align(align_to)
@@ -112,8 +116,11 @@ class Realsense(Node):
         hsv = cv2.cvtColor(self.color_image, cv2.COLOR_BGR2HSV)
         
         #min et max du vert
-        min_vert = np.array([55,100,100])
-        max_vert = np.array([75,180,180])
+        # min_vert = np.array([55,100,100])
+        # max_vert = np.array([75,180,180])
+
+        min_vert = np.array([50,100,50])
+        max_vert = np.array([85,255,255])
 
         mask_vert=cv2.inRange(hsv,min_vert,max_vert)
         mask_vert = cv2.GaussianBlur(mask_vert,(11,11),0)
@@ -129,6 +136,18 @@ class Realsense(Node):
             depth = self.depth_frame.get_distance(x,y)
             return([float(x),float(y),depth])
 
+    def poseXYZ(self,pixel):
+        if pixel is None : 
+            return
+        
+        (px,py)=pixel
+
+        depth = self.depth_frame.get_distance(px,py)
+
+        point = rs.rs2_deproject_pixel_to_point(self.color_intrinsics,[px,py],depth)
+        point= [point[0],point[1],point[2]]
+        return point
+
 
     def contours(self):
         self.filtre_vert()
@@ -139,18 +158,20 @@ class Realsense(Node):
                 ((x, y), rayon)=cv2.minEnclosingCircle(c)
                 rect=cv2.boundingRect(c)
                 # print(rect)
-                # print(rayon)
+                print(rayon)
                 coin=rect[:2]
                 largeur=rect[2]
                 hauteur=rect[3]
                 if rayon>40:
                     nb_contours += 1
+                    cv2.circle(self.color_image, (int(x), int(y)), 5, (0,0,255), 2)
                     if self.flag == 0:
                         self.count += 1
                         msg = String()
                         msg.data = "Un fantôme est détecté, c'est le numéro: " + str(self.count)
                         self.detection_vert.publish(msg)
-                        coord = self.depth_of_selection(int(x),int(y))
+                        #coord = self.depth_of_selection(int(x),int(y))
+                        coord = self.poseXYZ((int(x),int(y)))
                         msg = Point32()
                         msg.x = coord[0]
                         msg.y = coord[1]
@@ -162,7 +183,6 @@ class Realsense(Node):
                         print(type(coord))
 
                     self.flag = 1
-                    #cv2.circle(self.res2_vert, (int(x), int(y)), int(rayon), (0,0,255), 2)
                     cv2.rectangle(self.color_image, coin, (coin[0]+largeur, coin[1]+hauteur),(0,0,255), 2)
             if nb_contours ==0 :
                 self.flag = 0
@@ -211,4 +231,4 @@ if __name__=="__main__":
 
     signal.signal(signal.SIGINT, signalInteruption)
 
-    process_img(False,False)
+    process_img(False,True)
