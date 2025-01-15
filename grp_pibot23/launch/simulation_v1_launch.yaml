@@ -11,13 +11,13 @@ launch:
     name: "rviz2"
     args: "-d $(find-pkg-share grp_pibot23)/rviz/rviz_simulation.rviz"
 
-#- node:
-#    pkg: "grp_pibot23"
-#    exec: "pathfinding"
-#    name: "pathfinding_node"
-#    param:
-#    - { name: "is_simulation", value: True }
-#    - { name: "tunnel_vision_width", value: 0.5 }
+- node:
+    pkg: "grp_pibot23"
+    exec: "pathfinding"
+    name: "pathfinding_node"
+    param:
+    - { name: "is_simulation", value: True }
+    - { name: "tunnel_vision_width", value: 0.5 }
 
 # - executable:
  
