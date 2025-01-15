@@ -2,16 +2,15 @@
 import rclpy
 from  rclpy.node import Node
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist,Pose
 import sys
 import scan_echo
 import tf_conversions
 import tf2_ros
-import geometry_msgs.msg
 import turtlesim.msg
 
 
-# on transforme une posistion dans 'odom' en une posistion dans 'base_link'
+# on transforme une position dans 'odom' en une position dans 'base_link' (ca sera une position map in fine)
 class localGoal(Node):
     def __init__(self):
         super().__init__('localgoal')
@@ -52,6 +51,9 @@ class localGoal(Node):
             return
         # Compute goal into local coordinates
         localGoal = tf2_geometry_msgs.do_transform_pose( self.global_goal, stampedTransform )
+        #localGoal.position.x = 0.0
+        #localGoal.orientation.x = 0.0
+        #tf2_geometry_msgs.do_transform_pose( self.global_goal, localGoal, stampedTransform )
 
 
 if __name__ == '__main__':
