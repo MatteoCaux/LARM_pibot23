@@ -18,7 +18,7 @@ class localGoal(Node):
 
         #Pubs
         self._pubLocalPose= rosNode.create_publisher(
-            Twist, "/moveto/localgoal", 10
+            Pose, "/moveto/localgoal", 10
         )
         #Subs
         self._subToGoalPose= rosNode.create_subscription(
@@ -32,10 +32,12 @@ class localGoal(Node):
         self.local_frame= 'base_link'
 
         self.create_timer(0.1, self.publish_goal)
+
     #Subs calls
     def global_goal_listen(self,msg):
         self.global_goal=Pose()
         self.global_goal=msg
+
     #Process funcs
     def publish_goal(self):
         currentTime= rclpy.time.Time()
