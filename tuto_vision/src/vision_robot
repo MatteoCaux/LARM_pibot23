@@ -18,21 +18,18 @@ class Realsense(Node):
         self.pipeline = rs.pipeline()
         config = rs.config()
 
-        #counter et flag for fantome detecttion
+        #compteur et flag pour fantome detecttion
         self.flag =0
         self.count = 0
 
         # Get device product line for setting a supporting resolution
         pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
         pipeline_profile = config.resolve(pipeline_wrapper)
-        device = pipeline_profile.get_device()
         
         config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 60)
         config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 60)
         config.enable_stream(rs.stream.infrared, 1, 848, 480, rs.format.y8, 60)
         config.enable_stream(rs.stream.infrared, 2, 848, 480, rs.format.y8, 60)
-
-
 
         #create the publishers
         self.image_publisher = self.create_publisher(Image, 'sensor_msgs/cam_image',10)
@@ -45,10 +42,27 @@ class Realsense(Node):
         self.bridge=CvBridge()
 
         # Start streaming
-        self.pipeline.start(config)
+        profile = self.pipeline.start(config)
+
+        # get stream profile adn camera intrinsics
+        color_profile = rs.video_stream_profile(profile.get_stream(rs.stream.color))
+        self.color_intrinsics = color_profile.get_intrinsics()
 
         align_to = rs.stream.depth
         self.align = rs.align(align_to)
+
+        self.crop=None
+        self.color_info = (0,0,255)
+
+        #def min et max pour le masque vert
+        self.min_vert = np.array([50,100,50])
+        self.max_vert = np.array([85,255,255])
+        #min et max du noir
+        self.min_noir = np.array([0,0,0])
+        self.max_noir = np.array([255,255,30])
+        #min et max du vert
+        self.min_blanc = np.array([80,0,140])
+        self.max_blanc = np.array([255,40,255])
 
     def read_imgs(self):
         # Wait for a coherent tuple of frames: depth, color and accel
@@ -56,6 +70,7 @@ class Realsense(Node):
 
         color_frame = frames.first(rs.stream.color)
 
+        #creation de l'image aligne avec la depth
         aligned_frames =  self.align.process(frames)
         self.depth_frame = aligned_frames.get_depth_frame()
         aligned_color_frame = aligned_frames.get_color_frame()
@@ -108,86 +123,145 @@ class Realsense(Node):
         msg_infra.header.frame_id = "infrared_2"
         self.infra_publisher_2.publish(msg_infra)
         
-    def filtre_vert(self):
-        hsv = cv2.cvtColor(self.color_image, cv2.COLOR_BGR2HSV)
-        
-        #min et max du vert
-        min_vert = np.array([55,100,100])
-        max_vert = np.array([75,180,180])
 
-        mask_vert=cv2.inRange(hsv,min_vert,max_vert)
-        mask_vert = cv2.GaussianBlur(mask_vert,(11,11),0)
+    def filtre_couleur(self,image,mask_min,mask_max):
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        mask=cv2.inRange(hsv,mask_min,mask_max)
+        # mask_vert = cv2.GaussianBlur(mask_vert,(11,11),0)
 
         kernel= np.ones((5,5),np.uint8)
 
-        self.closing=cv2.morphologyEx(mask_vert,cv2.MORPH_OPEN,kernel)
+        mask=cv2.morphologyEx(mask,cv2.MORPH_OPEN,kernel)
 
-        self.res2_vert = cv2.cvtColor(cv2.bitwise_and(self.color_image,self.color_image,mask=self.closing),cv2.COLOR_HSV2BGR)
-    
-    def depth_of_selection(self,x,y):
-        if self.depth_frame:
-            depth = self.depth_frame.get_distance(x,y)
-            return([float(x),float(y),depth])
+        return mask
+
+    def poseXYZ(self,pixel):
+        if pixel is None : 
+            return
+        
+        (px,py)=pixel
+
+        depth = self.depth_frame.get_distance(px,py)
+
+        point = rs.rs2_deproject_pixel_to_point(self.color_intrinsics,[px,py],depth)
+        point= [point[0],point[1],point[2]]
+        return point
 
 
-    def contours(self):
-        self.filtre_vert()
-        contours=cv2.findContours(self.closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
-        nb_contours = 0
+    def fantome(self):
+        #appel de la fonction filtre_couleur pour obtenir le masque vert
+        self.mask_vert=self.filtre_couleur(self.color_image,self.min_vert,self.max_vert)
+
+        #creation de la liste de contours 
+        contours_vert=cv2.findContours(self.mask_vert, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+
+        #compteur de contours
+        nb_contours_vert = 0
+        self.carre_vert = 0
+        self.carre_noir=0
+        self.oeil_blanc=0
+
+        if len(contours_vert) > 0:
+            for c in contours_vert :
+                #recuperation du cercle et rectangle englobant
+                ((self.x_vert, self.y_vert), self.rayon_vert)=cv2.minEnclosingCircle(c)
+                rect=cv2.boundingRect(c)
+
+                #variable du rectangle
+                coin=rect[:2]
+                largeur=rect[2]
+                hauteur=rect[3]
+
+                if self.rayon_vert>40:
+                    nb_contours_vert += 1
+
+                    #creation d'une image crop pour rechercher les yeux
+                    x_max=coin[0]+largeur+30 if coin[0]+largeur+30 < self.color_image.shape[1] else coin[0]+largeur
+                    y_max=coin[1]+hauteur + 30 if coin[1]+ + 30 < self.color_image.shape[0] else coin[1]+hauteur
+                    y_min = coin[1] - 30 if coin[1] -30 > 0 else coin[1]
+                    x_min = coin[0] - 30 if coin[0] -30 > 0 else coin[0]
+                    self.crop = self.color_image[y_min:y_max,x_min:x_max]
+
+                    if self.crop is not None : 
+                        #appel de la fonction filtre_couleur pour obtenir les masques noir et blanc
+                        mask_noir = self.filtre_couleur(self.crop,self.min_noir,self.max_noir)
+                        mask_blanc = self.filtre_couleur(self.crop,self.min_blanc,self.max_blanc)
+                        self.contours_interne(mask_noir,True)
+                        self.contours_interne(mask_blanc,False)
+
+                    self.carre_vert += 1
+
+                    cv2.rectangle(self.color_image, coin, (coin[0]+largeur, coin[1]+hauteur),self.color_info, 2)
+            if nb_contours_vert ==0 :
+                self.carre_vert = 0
+
+    def contours_interne(self, mask, noir):
+        contours=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
         if len(contours) > 0:
             for c in contours :
                 ((x, y), rayon)=cv2.minEnclosingCircle(c)
                 rect=cv2.boundingRect(c)
-                # print(rect)
-                # print(rayon)
-                coin=rect[:2]
+
                 largeur=rect[2]
                 hauteur=rect[3]
-                if rayon>40:
-                    nb_contours += 1
-                    if self.flag == 0:
-                        self.count += 1
-                        msg = String()
-                        msg.data = "Un fantôme est détecté, c'est le numéro: " + str(self.count)
-                        self.detection_vert.publish(msg)
-                        coord = self.depth_of_selection(int(x),int(y))
-                        msg = Point32()
-                        msg.x = coord[0]
-                        msg.y = coord[1]
-                        msg.z = coord[2]
-                        self.coord.publish(msg)
-                        # print(self.count)
-                        # print(nb_contours)
-                        print(coord)
-                        print(type(coord))
+                ratio = rayon/self.rayon_vert
 
-                    self.flag = 1
-                    #cv2.circle(self.res2_vert, (int(x), int(y)), int(rayon), (0,0,255), 2)
-                    cv2.rectangle(self.color_image, coin, (coin[0]+largeur, coin[1]+hauteur),(0,0,255), 2)
-            if nb_contours ==0 :
-                self.flag = 0
-            
+                if noir :
+                    carre = largeur/hauteur
+                    iscarre = carre > 0.8 and carre < 1.2
+                    isratio = ratio > 0.1 and ratio < 0.2
+                else : 
+                    iscarre = True
+                    isratio = ratio < 0.35 and ratio > 0.25
+
+                if isratio and iscarre  :
+                    cv2.circle(self.crop, (int(x), int(y)), int(rayon), self.color_info, 2)
+                    if noir : 
+                        self.carre_noir+=1
+                    else : 
+                        self.oeil_blanc +=1
+
+    def detection_fantome(self):
+        if self.oeil_blanc >=1 and self.carre_noir >= 1 and self.carre_vert >=1 :
+            self.count += 1
+            msg = String()
+            msg.data = "Un fantôme est détecté, c'est le numero " + str(self.count)
+            self.detection_vert.publish(msg)
+            coord = self.poseXYZ((int(self.x_vert),int(self.y_vert)))
+            msg = Point32()
+            msg.x = coord[0]
+            msg.y = coord[1]
+            msg.z = coord[2]
+            self.coord.publish(msg)
+
+
 
     def show(self):
         # Show images
-        images = np.hstack((self.color_image, self.depth_colormap))#,self.infra_colormap_1,self.infra_colormap_2))
+        #images = np.hstack((self.color_image, self.depth_colormap))#,self.infra_colormap_1,self.infra_colormap_2))
         #green = np.hstack((self.res2_vert,self.closing))
 
         # Show images
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-        cv2.imshow('RealSense', images)
-        #cv2.imshow('vert',green)
+        cv2.imshow('RealSense', self.color_image)
+        if self.crop is not None : 
+            cv2.imshow('crop',self.crop)
         cv2.waitKey(1)
 
 
 # Node processes:
-def process_img(infra =False,show=False,args=None):
+def main(infra =False,show=False,args=None):
     rclpy.init(args=args)
     rsNode= Realsense()
     while isOk:
         rsNode.read_imgs()
         rsNode.publish_imgs()
-        rsNode.contours()
+        rsNode.fantome()
+        # rsNode.voir_carre_noir()
+        # rsNode.voir_yeux_blanc()
+
+        rsNode.detection_fantome()
         if infra : 
             rsNode.read_infra()
             rsNode.publish_infra()
@@ -211,4 +285,4 @@ if __name__=="__main__":
 
     signal.signal(signal.SIGINT, signalInteruption)
 
-    process_img(False,False)
+    main(False,True)

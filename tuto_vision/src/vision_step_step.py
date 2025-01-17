@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 # from skimage.measure import label, regionprops
 import math
+import os 
 
 # connect to a sensor (0: webcam)
 pipeline = rs.pipeline()
@@ -23,8 +24,8 @@ def filtre_vert(image_couleur):
     hsv = cv2.cvtColor(image_couleur, cv2.COLOR_BGR2HSV)
     
     #min et max du vert
-    min_vert = np.array([50,95,95])
-    max_vert = np.array([75,180,180])
+    min_vert = np.array([50,100,50])
+    max_vert = np.array([85,255,255])
 
     mask_vert=cv2.inRange(hsv,min_vert,max_vert)
     mask_vert = cv2.GaussianBlur(mask_vert,(11,11),0)
@@ -37,42 +38,75 @@ def filtre_vert(image_couleur):
 
     return closing,res2_vert
 
-def contours(image_couleur,mask,vert,depth_frame):
+def contours(image_couleur,image_neutre,mask,vert,depth_frame):
     contours=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
     if len(contours) > 0:
         for c in contours :
             ((x, y), rayon)=cv2.minEnclosingCircle(c)
             rect=cv2.boundingRect(c)
             #print(rect)
+            
             #print(rayon)
             coin=rect[:2]
             largeur=rect[2]
             hauteur=rect[3]
-            if rayon>20:
+            if rayon>40:
+                x_max=coin[0]+largeur+30 if coin[0]+largeur+30 < image_couleur.shape[1] else coin[0]+largeur
+                y_max=coin[1]+hauteur + 30 if coin[1]+ + 30 < image_couleur.shape[0] else coin[1]+hauteur
+                y_min = coin[1] - 30 if coin[1] -30 > 0 else coin[1]
+                x_min = coin[0] - 30 if coin[0] -30 > 0 else coin[0]
+                crop = image_neutre[y_min:y_max,x_min:x_max]
+
                 cv2.circle(vert, (int(x), int(y)), int(rayon), color_info, 2)
                 cv2.rectangle(image_couleur, coin, (coin[0]+largeur, coin[1]+hauteur),color_info, 2)
-                coord = depth_of_selection(int(x),int(y),depth_frame)
-                print(coord)
+                
 
-# def template_matching(template_path, image):
-#     img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                if crop.shape[0] !=0 and crop.shape[1]!=0:
+                    return crop, rayon
+    return None, 0
 
-#     # charger le template de l'objet à rechercher
-#     template = cv2.imread(template_path,0)
+def template_matching(template_folder_path, color_image):
+    img_gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
 
-#     # Récupération des dimensions de l'image
-#     w, h = template.shape[::-1]
+    # # charger le template de l'objet à rechercher
+    # templates = os.listdir(template_folder_path)
+    # print(templates)
 
-#     # Application du template atching
-#     res = cv2.matchTemplate(img_gray,template,cv2.TM_CCOEFF_NORMED)
+    # for t in templates : 
+    #     template = cv2.imread(template_folder_path+t,0)
+    #     # template = cv2.resize(template,(512,384))
+    #     # Récupération des dimensions de l'image
+    #     w, h = template.shape[::-1]
 
-#     # Sélection des meilleurs matched objects
-#     threshold = 0.8
-#     loc = np.where( res >= threshold)
+    #     # Application du template matching
+    #     res = cv2.matchTemplate(img_gray,template,cv2.TM_CCOEFF_NORMED)
 
-#     # Affichage de la boite englobante de chaque objet détecté
-#     for pt in zip(*loc[::-1]):
-#         cv2.rectangle(image, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
+    #     # Sélection des meilleurs matched objects
+    #     threshold = 0.5
+    #     loc = np.where( res >= threshold)
+
+    #     # Affichage de la boite englobante de chaque objet détecté
+    #     for pt in zip(*loc[::-1]):
+    #         cv2.rectangle(color_image, pt, (pt[0] + w, pt[1] + h), (255,0,0), 2)
+
+    # template = cv2.imread(template_folder_path+templates[0],0)
+    template = cv2.imread(template_folder_path+'FACE_2.jpg',0)
+
+    # template = cv2.resize(template,(512,384))
+    # Récupération des dimensions de l'image
+    w, h = template.shape[::-1]
+
+    # Application du template matching
+    res = cv2.matchTemplate(img_gray,template,cv2.TM_CCOEFF_NORMED)
+
+    # Sélection des meilleurs matched objects
+    threshold = 0.5
+    loc = np.where( res >= threshold)
+
+    # Affichage de la boite englobante de chaque objet détecté
+    for pt in zip(*loc[::-1]):
+        cv2.rectangle(color_image, pt, (pt[0] + w+2, pt[1] + h+2), (255,0,0), 2)
+
 
 def souris(event, x, y, flags, param):
     global lo, hi, color, hsv_px
@@ -101,6 +135,66 @@ def depth_of_selection(x,y,depth_frame):
     if depth_frame:
         depth = depth_frame.get_distance(x,y)
         return([x,y,depth])
+
+def voir_carre_noir(image_crop,image_couleur, rayon):
+    hsv = cv2.cvtColor(image_crop, cv2.COLOR_BGR2HSV)
+    
+    #min et max du noir
+    min_noir = np.array([0,0,0])
+    max_noir = np.array([255,255,30])
+
+    mask_noir=cv2.inRange(hsv,min_noir,max_noir)
+
+    kernel= np.ones((5,5),np.uint8)
+
+    mask_noir=cv2.morphologyEx(mask_noir,cv2.MORPH_OPEN,kernel)
+
+    contours=cv2.findContours(mask_noir, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    if len(contours) > 0:
+        for c in contours :
+            ((x, y), rayon)=cv2.minEnclosingCircle(c)
+            rect=cv2.boundingRect(c)
+
+            coin=rect[:2]
+            largeur=rect[2]
+            hauteur=rect[3]
+            carre = largeur/hauteur
+
+            ratio = rayon/rayon_vert
+            print("Le ratio noir est de "+str(ratio))
+            
+
+            if (ratio > 0.1 and ratio < 0.2) and (carre > 0.8 and carre < 1.2) :
+                cv2.circle(image_crop, (int(x), int(y)), int(rayon), color_info, 2)
+    return mask_noir
+
+
+def voir_yeux_blanc(image_crop,image_couleur,rayon_vert):
+    hsv = cv2.cvtColor(image_crop, cv2.COLOR_BGR2HSV)
+    
+    #min et max du vert
+    min_blanc = np.array([80,0,140])
+    max_blanc = np.array([255,40,255])
+
+    mask_blanc=cv2.inRange(hsv,min_blanc,max_blanc)
+
+    kernel= np.ones((5,5),np.uint8)
+
+    mask_blanc=cv2.morphologyEx(mask_blanc,cv2.MORPH_OPEN,kernel)
+
+    # res_blanc = cv2.cvtColor(cv2.bitwise_and(hsv,hsv,mask=mask_blanc),cv2.COLOR_HSV2BGR)
+    contours=cv2.findContours(mask_blanc, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    if len(contours) > 0:
+        for c in contours :
+            ((x, y), rayon)=cv2.minEnclosingCircle(c)
+            ratio = rayon/rayon_vert
+            print("Le ratio blanc est de "+str(ratio))
+            if rayon/rayon_vert < 0.35 and rayon/rayon_vert > 0.25:
+                cv2.circle(image_crop, (int(x), int(y)), int(rayon), color_info, 2)
+
+    return mask_blanc
+
+
 
 color=100
 
@@ -132,6 +226,7 @@ while True :
 
     # color_image = np.asanyarray(aligned_color_frame.get_data())
     color_image = np.asanyarray(color_frame.get_data())
+    color_image_neutre=color_image.copy()
 
     # Affichage des composantes HSV sous la souris sur l'image
     pixel_hsv = " ".join(str(values) for values in hsv_px)
@@ -139,17 +234,24 @@ while True :
     cv2.putText(color_image, "px HSV: "+pixel_hsv, (10, 260),
                font, 1, (255, 255, 255), 1, cv2.LINE_AA)
     
-    mask,vert=filtre_vert(color_image)
+    mask,vert=filtre_vert(color_image,color_image_neutre)
 
-    contours(color_image,mask,vert,depth_frame)
+    image_cropped=None
+    image_cropped, rayon_vert=contours(color_image,color_image_neutre,mask,vert,depth_frame)
 
-    # template_matching("./tuto_vision/img/template.png",color_image)
+
+    if image_cropped is not None :
+        #template_matching("./tuto_vision/template/",image_cropped)
+        blanc=voir_yeux_blanc(image_cropped,color_image,rayon_vert)
+        black=voir_carre_noir(image_cropped,color_image,rayon_vert)
+        cv2.imshow("crop",image_cropped)
+        cv2.imshow("crop_noir",black)
+        cv2.imshow("crop_blanc",blanc)
 
     # Display cropped image
     cv2.imshow("Camera", color_image)
-    # cv2.imshow('image2', image2)
-    cv2.imshow('Mask', mask)
-    cv2.imshow("Vert",vert)
+    # cv2.imshow('Mask', mask)
+    # cv2.imshow("Vert",vert)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         cv2.destroyAllWindows()
