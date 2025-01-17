@@ -1,0 +1,39 @@
+launch:
+
+#- include:
+#    file: "$(find-pkg-share tutorial_pkg)/scripts/test_move"
+- include:
+    file: "$(find-pkg-share stage_ros2)/launch/stage.launch.py"
+
+- node:
+   pkg: "rviz2"
+   exec: "rviz2"
+   name: "rviz2"
+   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_simulation.rviz"
+
+#- node:
+#    pkg: "tutorial_pkg"
+#    exec: "pathfinding_tuto"
+#    name: "pathfinding_node"
+#    param:
+#    - { name: "is_simulation", value: True }
+#    - { name: "tunnel_vision_width", value: 0.5 }
+
+- node:
+   pkg: "tutorial_pkg"
+   exec: "global_goal_publisher"
+   name: "global_goal_publisher_node"
+   param:
+   - { name: "x_global", value: 4.0}
+   - { name: "y_global", value: 2.0 }
+
+- node:
+   pkg: "tutorial_pkg"
+   exec: "goal_handler"
+   name: "goal_handler_node"
+
+
+# - executable:
+ 
+#     cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg testmoveto --ros-args -p x_global:=4 -p y_global:=4'
+

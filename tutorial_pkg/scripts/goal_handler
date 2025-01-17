@@ -3,6 +3,7 @@ import rclpy
 from  rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist,Pose
+from visualization_msgs.msg import Marker
 import sys
 import scan_echo
 import tf2_ros
@@ -25,6 +26,12 @@ class localGoal(Node):
         #Pubs
         self._pubLocalPose= self.create_publisher(
             Pose, "/moveto/localgoal", 10
+        )
+        self._pubLocalPoseMarker= self.create_publisher(
+            Marker, "/moveto/localgoalMarker", 10
+        )
+        self._pubGlobalPoseMarker= self.create_publisher(
+            Marker, "/moveto/globalgoalMarker", 10
         )
         #Subs
         self._subToGoalPose= self.create_subscription(
@@ -49,8 +56,8 @@ class localGoal(Node):
         # Get Transformation
         try:
             stampedTransform= self.tf_buffer.lookup_transform(
-                        'odom',
                         self.local_frame,
+                        'odom',
                         currentTime)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as tex: #:TransformException
             self.get_logger().info( f'Could not transform the goal into {self.local_frame}: {tex}')
@@ -61,7 +68,41 @@ class localGoal(Node):
         #localGoal.orientation.x = 0.0
         #tf2_geometry_msgs.do_transform_pose( self.global_goal, localGoal, stampedTransform )
         self._pubLocalPose.publish(localGoal)
+        self.publish_markers(localGoal)
 
+    def publish_markers(self,local_goal):
+        LocalPoseMarker=Marker()
+        GlobalPoseMarker=Marker()
+        LocalPoseMarker.header.frame_id='base_link'
+        LocalPoseMarker.header.stamp=self.get_clock().now().to_msg()
+        LocalPoseMarker.ns='GoalMarkers'
+        LocalPoseMarker.id=0
+        LocalPoseMarker.pose=local_goal
+        LocalPoseMarker.type=LocalPoseMarker.CUBE
+        LocalPoseMarker.action = LocalPoseMarker.ADD
+        LocalPoseMarker.scale.x = 1.0
+        LocalPoseMarker.scale.y = 0.1
+        LocalPoseMarker.scale.z = 0.1
+        LocalPoseMarker.color.a = 1.0
+        LocalPoseMarker.color.r = 0.0
+        LocalPoseMarker.color.g = 1.0
+        LocalPoseMarker.color.b = 0.0
+        GlobalPoseMarker.header.frame_id='odom'
+        GlobalPoseMarker.header.stamp=self.get_clock().now().to_msg()
+        GlobalPoseMarker.ns='GoalMarkers'
+        GlobalPoseMarker.id=1
+        GlobalPoseMarker.pose=self.global_goal
+        GlobalPoseMarker.type=GlobalPoseMarker.CUBE
+        GlobalPoseMarker.action = GlobalPoseMarker.ADD
+        GlobalPoseMarker.scale.x = 1.0
+        GlobalPoseMarker.scale.y = 0.1
+        GlobalPoseMarker.scale.z = 0.1
+        GlobalPoseMarker.color.a = 1.0
+        GlobalPoseMarker.color.r = 1.0
+        GlobalPoseMarker.color.g = 0.0
+        GlobalPoseMarker.color.b = 0.0
+        self._pubLocalPoseMarker.publish(LocalPoseMarker)
+        self._pubGlobalPoseMarker.publish(GlobalPoseMarker)
 
 if __name__ == '__main__':
     main()
