@@ -24,8 +24,8 @@ launch:
    exec: "global_goal_publisher"
    name: "global_goal_publisher_node"
    param:
-   - { name: "x_global", value: 4.0}
-   - { name: "y_global", value: 2.0 }
+   - { name: "x_global", value: 8.0}
+   - { name: "y_global", value: 3.0 }
 
 - node:
    pkg: "tutorial_pkg"

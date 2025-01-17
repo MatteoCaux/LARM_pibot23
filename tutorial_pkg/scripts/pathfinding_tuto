@@ -126,11 +126,11 @@ class StraightCtrl :
 
     def local_goal_msg(self,msg):
         self.localGoal=msg
-        print("LocalGoal:")
-        print("x:"+str(self.localGoal.position.x)+"y:"+str(self.localGoal.position.y))
+        # print("LocalGoal:")
+        # print("x:"+str(self.localGoal.position.x)+"y:"+str(self.localGoal.position.y))
         self.theta_goal=atan2(self.localGoal.position.y,self.localGoal.position.x)
         self.distance_goal=sqrt(self.localGoal.position.y**2+self.localGoal.position.x**2)
-        print('theta_goal:'+str(self.theta_goal))
+        # print('theta_goal:'+str(self.theta_goal))
 
     def scan_callback(self, scanMsg ):
         #self._logger.info( '> get scan' )
@@ -307,18 +307,21 @@ class StraightCtrl :
 
     def control_callback_move_to(self):
         velocity=Twist()
+        velocity.angular.z = self.previous_z #rad/s
+        base_angular_speed=0.7                                                         #rotation speed 
+        velocity=Twist()
         if self.no_scan or self._emergency_stop: 
             print("no scan/emergency stop")
             velocity.linear.x = 0.0 #m/s
             velocity.angular.z = 0.0 #rad/s
             self._pubVelocity.publish(velocity)
-        elif self.totalmindistance<0.1:
+        elif self.totalmindistance<0.15:
             print("object to close,turning around")                                                #if an object is too close, the robot can only rotate on itself
             velocity.linear.x = 0.0 #m/s
             velocity.angular.z  = 0.5
             self._pubVelocity.publish(velocity)
 
-        elif True:#not (self.goal_straight_line_obstacle and self.goal_obstacle_right_far and self.goal_obstacle_left_far):#si rien vers le goal
+        elif not (self.goal_straight_line_obstacle or self.goal_obstacle_right_far or self.goal_obstacle_left_far):#si rien vers le goal
             print("go to goal")
             if abs(self.theta_goal)>0.08726: #si pas bien oriente
                 velocity.angular.z = self.orientate_to_goal() #s'oriente vers le goal
@@ -327,6 +330,34 @@ class StraightCtrl :
             else:#si bien oriente
                 velocity.linear.x=self.smooth_speed_target(self.speed_to_goal(self.distance_goal),0.02)#go vers le goal
                 print("forward")
+        
+        elif self.obstacle_right_close or self.obstacle_left_close:                     #something is close
+                #We look at the situation (where are the obstacles) and we choose where to move
+                
+
+                # is there an obstacle 90° far ?
+                if self.obstacle_full_left_far and not self.obstacle_full_right_far:    #also there is something far on the right but not on the left
+                                   #so the robot go to the right
+                    velocity.angular.z = -base_angular_speed #rad/s 
+                if self.obstacle_full_right_far and not self.obstacle_full_left_far:    #also there is something far on the left but not on the right
+                                  #so the robot go to the left
+                    velocity.angular.z=base_angular_speed
+                #We adapt our speed to the current one
+                
+                else:                             #if its the first turn and there is not one far side triggered, the robot go to the left
+                    velocity.angular.z=base_angular_speed                  
+                    
+                velocity.linear.x=self.smooth_speed_target(0.0,0.05)
+        
+        elif self.obstacle_full_left_far or self.obstacle_full_right_far:
+            print("etape4")
+            velocity.linear.x=self.smooth_speed_target(0.7,0.02)
+        else:
+            print("rien")
+            velocity.linear.x=self.smooth_speed_target(0.7,0.02)
+
+
+
         # if self.obstacle_right_far and self.obstacle_left_far: # si mur en face
         #     if self.obstacle_full_left_far:# si truc loin a gauche
         #     if self.obstacle_full_right_far:  #ou droite
@@ -411,14 +442,15 @@ class StraightCtrl :
         self.goal_obstacle_right_far=False
         self.goal_obstacle_left_far=False
         in_range=False
+        #a FINIR LE PROBLEME DE L'ANGLE MORT
         angle= scanMsg.angle_min
         for aDistance in scanMsg.ranges:
             if 0.1 < aDistance:
                 #Check if theta_goal is somewhere in range and find between which increment
                 if self.theta_goal>angle and self.theta_goal < angle+scanMsg.angle_increment:
                     self.theta_goal=angle
-                    print("angle au goal:"+str(self.theta_goal))
-                    print("distance au goal:"+str(self.distance_goal))
+                    # print("angle au goal:"+str(self.theta_goal))
+                    # print("distance au goal:"+str(self.distance_goal))
                     in_range=True # Goal is in the scan angle range
                     #Check if there is an obstacle before the goal on the straight line
                     if aDistance<self.distance_goal:
@@ -426,7 +458,7 @@ class StraightCtrl :
                     #Check for obstacle around the straight line
                     angle_goal=scanMsg.angle_min
                     for aDistance_goal in scanMsg.ranges:
-                        if 0.1 < aDistance_goal:
+                        if 0.1 < aDistance_goal and aDistance_goal<self.distance_goal:
                             if angle_goal <self.theta_goal and angle_goal >self.theta_goal-1:
                                 if tunnel_vision_width/(2*sin(abs(angle_goal)))>=aDistance_goal:
                                     self.goal_obstacle_right_far=True
@@ -435,6 +467,7 @@ class StraightCtrl :
                                 if tunnel_vision_width/(2*sin(abs(angle_goal)))>=aDistance_goal:
                                     self.goal_obstacle_left_far=True
                         angle_goal+=scanMsg.angle_increment
+                    
             angle+= scanMsg.angle_increment
         if not in_range:
             print("goal is not aligned with scan range")
