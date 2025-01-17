@@ -5,7 +5,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist,Pose
 import sys
 import scan_echo
-from math import sin,atan,sqrt
+from math import sin,atan2,sqrt
 from time import time,sleep
 import random as rd
 #positive :gauche:left
@@ -67,9 +67,10 @@ class StraightCtrl :
         self._emergency_stop=False
         self.random_turning=False
         self.localGoal=Pose()
-        self.localGoal.position.x=5
-        self.localGoal.position.y=5
-
+        self.localGoal.position.x=-3
+        self.localGoal.position.y=6
+        self.theta_goal=atan2(self.localGoal.position.y,self.localGoal.position.x)
+        self.distance_goal=sqrt(self.localGoal.position.y**2+self.localGoal.position.x**2)
         # Initialize publisher:
         self._pubVelocity= rosNode.create_publisher(
             Twist, cmd_robot_topic, 10
@@ -125,8 +126,11 @@ class StraightCtrl :
 
     def local_goal_msg(self,msg):
         self.localGoal=msg
-        self.theta_goal=atan(self.localGoal.position.y/self.localGoal.position.x)
+        print("LocalGoal:")
+        print("x:"+str(self.localGoal.position.x)+"y:"+str(self.localGoal.position.y))
+        self.theta_goal=atan2(self.localGoal.position.y,self.localGoal.position.x)
         self.distance_goal=sqrt(self.localGoal.position.y**2+self.localGoal.position.x**2)
+        print('theta_goal:'+str(self.theta_goal))
 
     def scan_callback(self, scanMsg ):
         #self._logger.info( '> get scan' )
@@ -316,7 +320,7 @@ class StraightCtrl :
 
         elif True:#not (self.goal_straight_line_obstacle and self.goal_obstacle_right_far and self.goal_obstacle_left_far):#si rien vers le goal
             print("go to goal")
-            if self.theta_goal< -0.08726 or self.theta_goal> 0.08726: #si pas bien oriente
+            if abs(self.theta_goal)>0.08726: #si pas bien oriente
                 velocity.angular.z = self.orientate_to_goal() #s'oriente vers le goal
                 print(velocity.angular.z)
                 print("turning on himself")
@@ -435,6 +439,7 @@ class StraightCtrl :
         if not in_range:
             print("goal is not aligned with scan range")
 
+    # speed function
     def smooth_speed_target(self,target:float,step:float):
         velocity=Twist()
         if self.previous_x>target+15*step:                                          #if the robot was moving fast, it slows hardly
@@ -488,13 +493,14 @@ class StraightCtrl :
     def orientate_to_goal(self):
         precision=0.08726
         if self.theta_goal>precision*3:
-            rad_speed=-0.7
-        elif self.theta_goal<-precision*3:
-            rad_speed=0.7
-        elif self.theta_goal>precision:
-            rad_speed=-0.3
-        elif self.theta_goal<-precision:
             rad_speed=0.3
+        elif self.theta_goal<-precision*3:
+            rad_speed=-0.3
+    
+        elif self.theta_goal>precision:
+            rad_speed=0.1
+        elif self.theta_goal<-precision:
+            rad_speed=-0.1
         else:
             rad_speed=0.0
         return(rad_speed)
