@@ -177,10 +177,10 @@ class Realsense(Node):
                     nb_contours_vert += 1
 
                     #creation d'une image crop pour rechercher les yeux
-                    x_max=coin[0]+largeur+30 if coin[0]+largeur+30 < self.color_image.shape[1] else coin[0]+largeur
-                    y_max=coin[1]+hauteur + 30 if coin[1]+ + 30 < self.color_image.shape[0] else coin[1]+hauteur
-                    y_min = coin[1] - 30 if coin[1] -30 > 0 else coin[1]
-                    x_min = coin[0] - 30 if coin[0] -30 > 0 else coin[0]
+                    x_max=coin[0]+largeur+10 if coin[0]+largeur+10 < self.color_image.shape[1] else coin[0]+largeur
+                    y_max=coin[1]+hauteur + 10 if coin[1]+ + 10 < self.color_image.shape[0] else coin[1]+hauteur
+                    y_min = coin[1] - 10 if coin[1] -10 > 0 else coin[1]
+                    x_min = coin[0] - 10 if coin[0] -10 > 0 else coin[0]
                     self.crop = self.color_image[y_min:y_max,x_min:x_max]
 
                     if self.crop is not None : 
