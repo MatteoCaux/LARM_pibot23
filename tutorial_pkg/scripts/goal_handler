@@ -80,9 +80,9 @@ class localGoal(Node):
         LocalPoseMarker.pose=local_goal
         LocalPoseMarker.type=LocalPoseMarker.CUBE
         LocalPoseMarker.action = LocalPoseMarker.ADD
-        LocalPoseMarker.scale.x = 1.0
+        LocalPoseMarker.scale.x = 0.1
         LocalPoseMarker.scale.y = 0.1
-        LocalPoseMarker.scale.z = 0.1
+        LocalPoseMarker.scale.z = 1.0
         LocalPoseMarker.color.a = 1.0
         LocalPoseMarker.color.r = 0.0
         LocalPoseMarker.color.g = 1.0
@@ -94,9 +94,9 @@ class localGoal(Node):
         GlobalPoseMarker.pose=self.global_goal
         GlobalPoseMarker.type=GlobalPoseMarker.CUBE
         GlobalPoseMarker.action = GlobalPoseMarker.ADD
-        GlobalPoseMarker.scale.x = 1.0
+        GlobalPoseMarker.scale.x = 0.1
         GlobalPoseMarker.scale.y = 0.1
-        GlobalPoseMarker.scale.z = 0.1
+        GlobalPoseMarker.scale.z = 1.0
         GlobalPoseMarker.color.a = 1.0
         GlobalPoseMarker.color.r = 1.0
         GlobalPoseMarker.color.g = 0.0
