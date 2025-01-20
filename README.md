@@ -78,3 +78,13 @@ L'objectif du challenge 1 est de parcourir entièrement une zone fermée en évi
 Pour le challenge 1, vous pouvez : 
 - Lancer le fichier `simulation_v1_launch.yaml` pour la partie simulation : `ros2 launch tutorial_pkg simulation_v1_launch.yaml`
 - Lancer le fichier `tbot_v1_launch.yaml` pour la partie réelle : `ros2 launch tutorial_pkg tbot_v1_launch.yaml`
+
+## Challenge 2
+
+### Objectifs
+
+L'objectif du challenge 2 est de reprendre les fonctionnalités du challenge 1 en y ajoutant de nouvelles caractéristiques. La détection des fantômes est plus fine si bien que les faux positifs sont évités et qu'un robot n'est détcté qu'une seule fois. Une carte de l'environnement est créée en direct et les fantômes détectés sont représentés dessus.
+
+### Lancement du challenge 2
+
+Pour le challenge 2, vous pouvez :
