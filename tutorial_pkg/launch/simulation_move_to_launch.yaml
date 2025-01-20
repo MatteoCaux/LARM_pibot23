@@ -1,15 +1,16 @@
 launch:
-
 #- include:
 #    file: "$(find-pkg-share tutorial_pkg)/scripts/test_move"
+#- include:
+#   file: "$(find-pkg-share stage_ros2)/launch/stage.launch.py"
 - include:
-    file: "$(find-pkg-share stage_ros2)/launch/stage.launch.py"
+   file: "$(find-pkg-share tbot_sim)/launch/challenge-1.launch.py"
 
 - node:
    pkg: "rviz2"
    exec: "rviz2"
    name: "rviz2"
-   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_simulation.rviz"
+   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_simu_move_to_gazebo.rviz --ros-args --remap use_sim_time:=True"
 
 #- node:
 #    pkg: "tutorial_pkg"
@@ -24,8 +25,8 @@ launch:
    exec: "global_goal_publisher"
    name: "global_goal_publisher_node"
    param:
-   - { name: "x_global", value: 4.0}
-   - { name: "y_global", value: 2.0 }
+   - { name: "x_global", value: 8.0}
+   - { name: "y_global", value: 3.0 }
 
 - node:
    pkg: "tutorial_pkg"

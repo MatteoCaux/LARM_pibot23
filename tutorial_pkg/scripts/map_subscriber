@@ -1,0 +1,50 @@
+#!/usr/bin/python3
+import rclpy
+from  rclpy.node import Node
+from geometry_msgs.msg import Pose
+
+
+def main():
+    rclpy.init()
+    mapSub= MapSubscriber()
+    # Start infinite loop
+    rclpy.spin(mapSub)
+    # Clean everything and switch the light off
+    mapSub.destroy_node()
+    rclpy.shutdown()
+
+class MapSubscriber(Node):
+    def __init__(self):
+        super().__init__('map_subscribers')
+
+        #Subs
+        self._subMap= self.create_subscription(
+                Pose, '/map',
+                self.subMap_data_handler, 10
+            )
+
+    def subMap_data_handler(self,MapMsg):
+        self.height=MapMsg.info.height
+        self.width=MapMsg.info.width
+        self.res=MapMsg.info.resolution
+        self.origin=MapMsg.origin
+        self.data=MapMsg.data
+        for i in height:
+            for j in width:
+                pixel=data[i][j]
+                if pixel==-1:
+                    touching=self.check_around_pixel(i,j)
+                    print(str(pixel)+"coord"+str(i)+","+str(j))
+
+    def check_around_pixel(self,i,j):
+        #check if pixels around (in a cross) the targeted pixel are white
+        res=False
+        if not i<=0:if self.data[i-1][j]==1:res=True
+        if not i>self.height:if self.data[i+1][j]==1:res=True
+        if not j<0: if self.data[i][j-1]==1:res=True
+        if not j>self.width:if self.data[i][j+1]==1:res=True
+        return(res)
+
+if __name__ == '__main__':
+    main()
+    

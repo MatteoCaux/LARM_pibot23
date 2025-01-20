@@ -7,13 +7,6 @@ from geometry_msgs.msg import Pose
 def main():
     rclpy.init()
     globalGoalPub= globalGoalPublisher()
-    globalGoalPub.declare_parameter('x_global',0.0)
-    globalGoalPub.declare_parameter('y_global',0.0)
-
-    global x_global,y_global
-
-    x_global=globalGoalPub.get_parameter('x_global').value
-    y_global=globalGoalPub.get_parameter('y_global').value
 
 
     # Start infinite loop
@@ -26,6 +19,9 @@ class globalGoalPublisher(Node):
     def __init__(self):
         super().__init__('localgoalTF')
         self.global_goal=Pose()
+        self.declare_parameter('x_global',0.0)
+        self.declare_parameter('y_global',0.0)
+
         #Pubs
         self._pubGlobalPose= self.create_publisher(
             Pose, '/moveto/globalgoal', 10
@@ -37,6 +33,8 @@ class globalGoalPublisher(Node):
     #Process funcs
     def publish_goal(self):
         globalPose=Pose()
+        x_global= self.get_parameter('x_global').value 
+        y_global= self.get_parameter('y_global').value
         globalPose.position.x = x_global
         globalPose.position.y = y_global
         self._pubGlobalPose.publish(globalPose)
