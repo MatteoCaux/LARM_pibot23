@@ -2,7 +2,8 @@
 import rclpy
 from  rclpy.node import Node
 from geometry_msgs.msg import Pose
-
+from nav_msgs.msg import OccupancyGrid
+from std_msgs.msg import Bool
 
 def main():
     rclpy.init()
@@ -17,9 +18,13 @@ class MapSubscriber(Node):
     def __init__(self):
         super().__init__('map_subscribers')
 
+        #Pubs
+        self._pubPathfindingState= self.create_publisher(
+            Bool, '/is_pathfinding_on_move_to', 10
+        )
         #Subs
         self._subMap= self.create_subscription(
-                Pose, '/map',
+                OccupancyGrid, '/map',
                 self.subMap_data_handler, 10
             )
 
@@ -27,22 +32,51 @@ class MapSubscriber(Node):
         self.height=MapMsg.info.height
         self.width=MapMsg.info.width
         self.res=MapMsg.info.resolution
-        self.origin=MapMsg.origin
+        self.origin=MapMsg.info.origin
         self.data=MapMsg.data
-        for i in height:
-            for j in width:
-                pixel=data[i][j]
-                if pixel==-1:
+        print('analysing')
+        message=Bool()
+        if self.get_completed_prct()>70:
+            print('à depasser 70%')
+            message.data=True
+            self._pubPathfindingState.publish(message)
+        else:
+            print('pas enocre à 70%')
+            message.data=False
+            self._pubPathfindingState.publish(message)
+
+    def get_completed_prct(self):
+        compteur=0
+        for i in range(self.height):
+            for j in range(self.width):
+                pixel=self.find_pixel(i,j)
+                if pixel==0:
+                    compteur+=1
+        return(compteur/(self.height*self.width)*100)
+
+    def get_pixel_touching_border(self):
+        for i in range(self.height):
+            for j in range(self.width):
+                pixel=self.find_pixel(i,j)
+                print(pixel)
+                if pixel==0:
                     touching=self.check_around_pixel(i,j)
                     print(str(pixel)+"coord"+str(i)+","+str(j))
+
+    def find_pixel(self,i,j):
+       return(self.data[i*self.width+j])
 
     def check_around_pixel(self,i,j):
         #check if pixels around (in a cross) the targeted pixel are white
         res=False
-        if not i<=0:if self.data[i-1][j]==1:res=True
-        if not i>self.height:if self.data[i+1][j]==1:res=True
-        if not j<0: if self.data[i][j-1]==1:res=True
-        if not j>self.width:if self.data[i][j+1]==1:res=True
+        if not i<=0:
+            if self.data[(i-1)*self.width+j]==-1:res=True
+        if not i>=self.height:
+            if self.data[(i+1)*self.width+j]==-1:res=True
+        if not j<=0: 
+            if self.data[i*self.width+j-1]==-1:res=True
+        if not j>=self.width:
+            if self.data[i*self.width+j+1]==-1:res=True
         return(res)
 
 if __name__ == '__main__':

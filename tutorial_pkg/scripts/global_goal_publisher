@@ -27,7 +27,6 @@ class globalGoalPublisher(Node):
             Pose, '/moveto/globalgoal', 10
         )
         # Node Attribute:
-        self.local_frame= 'base_link'
         self.create_timer(0.1, self.publish_goal)
 
     #Process funcs

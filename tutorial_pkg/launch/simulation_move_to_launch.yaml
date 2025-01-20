@@ -1,25 +1,21 @@
 launch:
+###Simulateur
 #- include:
 #    file: "$(find-pkg-share tutorial_pkg)/scripts/test_move"
 #- include:
 #   file: "$(find-pkg-share stage_ros2)/launch/stage.launch.py"
 - include:
    file: "$(find-pkg-share tbot_sim)/launch/challenge-1.launch.py"
-
+###SLAM
+- include:
+   file: "$(find-pkg-share slam_toolbox)/launch/online_async_launch.py"
+###RVIZ
 - node:
    pkg: "rviz2"
    exec: "rviz2"
    name: "rviz2"
    args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_simu_move_to_gazebo.rviz --ros-args --remap use_sim_time:=True"
-
-#- node:
-#    pkg: "tutorial_pkg"
-#    exec: "pathfinding_tuto"
-#    name: "pathfinding_node"
-#    param:
-#    - { name: "is_simulation", value: True }
-#    - { name: "tunnel_vision_width", value: 0.5 }
-
+###GOAL NODES
 - node:
    pkg: "tutorial_pkg"
    exec: "global_goal_publisher"
@@ -32,9 +28,19 @@ launch:
    pkg: "tutorial_pkg"
    exec: "goal_handler"
    name: "goal_handler_node"
+###PATHFINDING
+# - node:
+#    pkg: "tutorial_pkg"
+#    exec: "pathfinding_tuto"
+#    name: "pathfinding_node"
+#    param:
+#    - { name: "is_simulation", value: True }
+#    - { name: "tunnel_vision_width", value: 0.5 }
+   
+# - node:
+#    pkg: "tutorial_pkg"
+#    exec: "map_subscriber"
+#    name: "map_subscriber"
 
-
-# - executable:
- 
-#     cmd: gnome-terminal --tab -e 'ros2 run tutorial_pkg testmoveto --ros-args -p x_global:=4 -p y_global:=4'
-
+- executable:
+   cmd: gnome-terminal --tab -e 'rqt'

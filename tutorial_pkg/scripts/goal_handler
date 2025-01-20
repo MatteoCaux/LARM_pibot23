@@ -23,6 +23,7 @@ class localGoal(Node):
     def __init__(self):
         super().__init__('localgoalTF')
         self.global_goal=Pose()
+        self.global_frame='map'
         #Pubs
         self._pubLocalPose= self.create_publisher(
             Pose, "/moveto/localgoal", 10
@@ -57,7 +58,7 @@ class localGoal(Node):
         try:
             stampedTransform= self.tf_buffer.lookup_transform(
                         self.local_frame,
-                        'odom',
+                        self.global_frame,
                         currentTime)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as tex: #:TransformException
             self.get_logger().info( f'Could not transform the goal into {self.local_frame}: {tex}')
@@ -84,7 +85,7 @@ class localGoal(Node):
         LocalPoseMarker.color.r = 0.0
         LocalPoseMarker.color.g = 1.0
         LocalPoseMarker.color.b = 0.0
-        GlobalPoseMarker.header.frame_id='odom'
+        GlobalPoseMarker.header.frame_id=self.global_frame
         GlobalPoseMarker.header.stamp=self.get_clock().now().to_msg()
         GlobalPoseMarker.ns='GoalMarkers'
         GlobalPoseMarker.id=1
