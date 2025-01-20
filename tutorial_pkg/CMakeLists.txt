@@ -19,11 +19,14 @@ install( PROGRAMS lib_import/scan_echo.py DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/pathfinding_tuto DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/goal_handler DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/global_goal_publisher DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS scripts/ghost_marker_publisher DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS scripts/pacman_marker_publisher DESTINATION lib/${PROJECT_NAME} )
 
 # Install resource files.
 install(DIRECTORY
   launch
   rviz
+  stl
   DESTINATION share/${PROJECT_NAME}/
 )
 

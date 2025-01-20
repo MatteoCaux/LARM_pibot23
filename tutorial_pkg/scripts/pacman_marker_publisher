@@ -1,0 +1,87 @@
+#!/usr/bin/python3
+import rclpy
+from  rclpy.node import Node
+from geometry_msgs.msg import Point32, Pose
+from visualization_msgs.msg import Marker
+import tf2_ros
+import tf2_geometry_msgs
+import cv2
+import numpy as np
+import os
+
+
+class Pacman_Marker(Node):
+    def __init__(self):
+        super().__init__('Pacman_Pub')
+
+        #get the stl path for the ghost with an argument
+        self.declare_parameter('pacman_path','/home/imtne.local/kristian.bouvet/ros_space/src/LARM_pibot23/tutorial_pkg/stl')
+        self.pacman_path=self.get_parameter('pacman_path').value
+
+        self._pubPacmanMarker = self.create_publisher(Marker, "/PacmanMarker", 10)
+
+        self.create_timer(0.1, self.publish_markers)
+
+        # Transform tool:
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+
+        self.local_frame = 'base_link'
+
+    def publish_markers(self):
+        pose=Pose()
+        # adjust pose
+        pose.position.y -= 1.5 
+        pose.position.x -= 0.5 
+        currentTime= rclpy.time.Time()
+        # Get Transformation
+        try:
+            stampedTransform= self.tf_buffer.lookup_transform(
+                        'odom', #'map'
+                        self.local_frame,
+                        currentTime)
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as tex: #:TransformException
+            self.get_logger().info( f'Could not transform the Point into {self.local_frame}: {tex}')
+            return
+        # Compute ghost pose from laser_link to map 
+        pacman_pose = tf2_geometry_msgs.do_transform_pose( pose, stampedTransform )
+                
+        PacmanMarker=Marker()
+        PacmanMarker.header.frame_id='odom'#'map'
+        PacmanMarker.header.stamp=self.get_clock().now().to_msg()
+        PacmanMarker.ns='PacmanMarkers'
+        PacmanMarker.id=0
+
+        # Set the position of each marker
+        PacmanMarker.pose=pacman_pose
+
+        if (self.pacman_path is not None) and os.path.isfile(self.pacman_path+"/Ghost-8x3.stl"):
+            PacmanMarker.type=10
+            PacmanMarker.action = 0
+            PacmanMarker.mesh_resource = "file:"+self.pacman_path+"/Pacman-6x3.stl"
+        else : 
+            PacmanMarker.type=PacmanMarker.CUBE
+            PacmanMarker.action = PacmanMarker.ADD
+        
+        PacmanMarker.scale.x = 0.01
+        PacmanMarker.scale.y = 0.01
+        PacmanMarker.scale.z = 0.01
+        PacmanMarker.color.a = 1.0
+        PacmanMarker.color.r = 1.0
+        PacmanMarker.color.g = 1.0
+        PacmanMarker.color.b = 0.0
+
+        self._pubPacmanMarker.publish(PacmanMarker)
+
+def main():
+    rclpy.init()
+    PacmanNode = Pacman_Marker()
+    # Start infinite loop
+    rclpy.spin(PacmanNode)
+    # Clean everything and switch the light off
+    aNode.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__=="__main__":
+    main()

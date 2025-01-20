@@ -1,0 +1,8 @@
+launch:
+#launch the vision_robot node with the display by imshow
+- node:
+    pkg: "tuto_vision"
+    exec: "vision_robot"
+    name: "vision_robot"
+    param:
+    - { name: "show_img", value: True } 
