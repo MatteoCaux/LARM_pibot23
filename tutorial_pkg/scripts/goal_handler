@@ -64,9 +64,6 @@ class localGoal(Node):
             return
         # Compute goal into local coordinates
         localGoal = tf2_geometry_msgs.do_transform_pose( self.global_goal, stampedTransform )
-        #localGoal.position.x = 0.0
-        #localGoal.orientation.x = 0.0
-        #tf2_geometry_msgs.do_transform_pose( self.global_goal, localGoal, stampedTransform )
         self._pubLocalPose.publish(localGoal)
         self.publish_markers(localGoal)
 
