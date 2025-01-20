@@ -1,0 +1,174 @@
+#!/usr/bin/python3
+import rclpy
+from  rclpy.node import Node
+# from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Point32, Pose
+from visualization_msgs.msg import Marker
+# import sys
+# import scan_echo
+import tf2_ros
+# import turtlesim.msg
+import tf2_geometry_msgs
+import cv2
+import numpy as np
+import os
+
+
+class Ghost_Marker(Node):
+    def __init__(self):
+        super().__init__('Ghost_Pub')
+
+        #get the stl path for the ghost with an argument
+        self.declare_parameter('ghost_path','/home/imtne.local/kristian.bouvet/ros_space/src/LARM_pibot23/tutorial_pkg/stl')
+        self.ghost_path=self.get_parameter('ghost_path').value
+
+        self.centre_ghost = None
+
+        self._pubGhostMarker = self.create_publisher(Marker, "/GhostMarker", 10)
+
+        # subscribe to the topic /ghost_center to have the point of the ghost
+        self._subToGhost= self.create_subscription(
+            Point32, '/ghost_center',
+            self.Ghost_listener, 10
+        )
+
+        self.create_timer(0.1, self.publish_markers)
+
+        # Transform tool:
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+
+        self.local_frame = 'laser_link'
+
+        #list of all the detected ghost
+        self.list_ghost = []
+        self.new=False
+
+    
+    def Ghost_listener(self,msg):
+        self.centre_ghost = msg
+        if self.centre_ghost.x == 0 or self.centre_ghost.y == 0 or self.centre_ghost.z == 0 : 
+            self.centre_ghost = None
+        self.new = False
+
+    def publish_markers(self):
+        if self.centre_ghost is not None :
+            ghost_pose = self.cam2lidar(self.centre_ghost)
+            ghost_pose=self.lidar2map(ghost_pose)
+            self.distance(ghost_pose)
+
+            if self.new :  
+                GhostMarker=Marker()
+                GhostMarker.header.frame_id='odom'#'map'
+                GhostMarker.header.stamp=self.get_clock().now().to_msg()
+                GhostMarker.ns='GhostsMarkers'
+                GhostMarker.id=0
+
+                # Set the position of each marker
+                GhostMarker.pose = ghost_pose
+
+                if (self.ghost_path is not None) and os.path.isfile(self.ghost_path+"/Ghost-8x3.stl"):
+                    GhostMarker.type=10
+                    GhostMarker.action = 0
+                    GhostMarker.mesh_resource = "file:"+self.ghost_path+"/Ghost-8x3.stl"
+                else : 
+                    GhostMarker.type=GhostMarker.CUBE
+                    GhostMarker.action = GhostMarker.ADD
+                
+                GhostMarker.scale.x = 0.01
+                GhostMarker.scale.y = 0.01
+                GhostMarker.scale.z = 0.01
+                GhostMarker.color.a = 1.0
+                GhostMarker.color.r = 0.0
+                GhostMarker.color.g = 1.0
+                GhostMarker.color.b = 0.0
+
+                self._pubGhostMarker.publish(GhostMarker)
+    
+    def deg2rad(angle):
+        return (angle * 2 * np.pi)/360.0
+
+    def mat4x4(rot,trans):
+        RT=np.concatenate((rot,trans),axis=1)
+        mat4x4 = np.concatenate((RT,np.asanyarray([[0,0,0,1]])),axis=0)
+        return mat4x4
+
+    def cam2lidar(self,point:Point32):
+        """"
+        Take the Point32 of the ghost in the camera base as input.
+        Return the Pose of the ghost in the laser_link base as output.
+        """
+
+        #As the matrix between the camera and the lidar is constant,
+        # we computed it only one time then we use the computed value
+
+        # #matrices de rotation 
+        # rot1=cv2.Rodrigues(np.asanyarray([self.deg2rad(-10),0,0]))[0]
+        # rot2=cv2.Rodrigues(np.asanyarray([0,self.deg2rad(90),0]))[0]
+        # rot3=cv2.Rodrigues(np.asanyarray([self.deg2rad(-90),0,0]))[0]
+
+        # # vecteur translation
+        # trans = np.asanyarray([[0],[0],[0.13]])
+
+        # mat_tot = self.mat4x4(rot3@rot2@rot1,trans) 
+        # print(mat_tot)
+
+        mat_tot =np.asanyarray([[ 0.00000000e+00, -1.73648178e-01 , 9.84807753e-01, 0.00000000e+00],
+                                [-1.00000000e+00, 0.00000000e+00  ,7.09349674e-17 , 0.00000000e+00],
+                                [ 0.00000000e+00, -9.84807753e-01 ,-1.73648178e-01, 1.30000000e-01],
+                                [ 0.00000000e+00, 0.00000000e+00  ,0.00000000e+00,  1.00000000e+00]])
+
+
+        point2 = mat_tot @ np.asanyarray([[point.x],[point.y],[point.z],[1]])
+
+        pose_ghost = Pose()
+        pose_ghost.position.x=point2[0][0]
+        pose_ghost.position.y=point2[1][0]
+        pose_ghost.position.z=point2[2][0]
+
+        # print(point2)
+        # print(pose_ghost)
+
+        return pose_ghost
+    
+    def lidar2map(self,pose):
+        currentTime= rclpy.time.Time()
+        # Get Transformation
+        try:
+            stampedTransform= self.tf_buffer.lookup_transform(
+                        'odom', #'map'
+                        'laser',# self.local_frame,
+                        currentTime)
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as tex: #:TransformException
+            self.get_logger().info( f'Could not transform the Point into {self.local_frame}: {tex}')
+            return
+        # Compute ghost pose from laser_link to map 
+        map_ghost = tf2_geometry_msgs.do_transform_pose( pose, stampedTransform )
+        return map_ghost
+
+
+    def distance(self,new_ghost):
+        for pose in self.list_ghost:
+            d = np.sqrt((pose.position.x - new_ghost.position.x)**2 +(pose.position.y - new_ghost.position.y)**2 + (pose.position.z - new_ghost.position.z)**2 )
+            # print(d)
+            if d < 0.05 : 
+                self.new = False
+                return
+        self.list_ghost.append(new_ghost)
+        self.new=True
+        # print(self.list_ghost)
+
+
+def main():
+    rclpy.init()
+    GhostNode = Ghost_Marker()
+    # FantomeNode.publish_markers()
+    # Start infinite loop
+    rclpy.spin(GhostNode)
+    # Clean everything and switch the light off
+    aNode.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__=="__main__":
+    main()

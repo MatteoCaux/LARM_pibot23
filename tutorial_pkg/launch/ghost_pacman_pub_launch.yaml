@@ -1,0 +1,15 @@
+launch:
+
+- node:
+    pkg: "tutorial_pkg"
+    exec: "ghost_marker_publisher"
+    name: "ghost_marker_publisher"
+    param:
+    - { name: "ghost_path", value: $(find-pkg-share tutorial_pkg)/stl }
+
+- node:
+    pkg: "tutorial_pkg"
+    exec: "pacman_marker_publisher"
+    name: "pacman_marker_publisher"
+    param:
+    - { name: "pacman_path", value: $(find-pkg-share tutorial_pkg)/stl }

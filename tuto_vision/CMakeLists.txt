@@ -26,4 +26,13 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+#Python scripts
+install( PROGRAMS src/vision_robot DESTINATION lib/${PROJECT_NAME} )
+
+# Install resource files.
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
 ament_package()
