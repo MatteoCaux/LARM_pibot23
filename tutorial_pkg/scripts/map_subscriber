@@ -3,7 +3,9 @@ import rclpy
 from  rclpy.node import Node
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import OccupancyGrid
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool,Int16
+import random
+#pixel value chart ! 0=white pixel: accesible, 100=black pixel:wall, -1=gray pixel:undiscovered
 
 def main():
     rclpy.init()
@@ -17,33 +19,72 @@ def main():
 class MapSubscriber(Node):
     def __init__(self):
         super().__init__('map_subscribers')
-
+        self.is_publishing_goal_pose=False
+        self.declare_parameter('give_goal_time_step',10)
+        #read the parameters
+        self.give_goal_time_step=self.get_parameter('give_goal_time_step').value
         #Pubs
         self._pubPathfindingState= self.create_publisher(
             Bool, '/is_pathfinding_on_move_to', 10
+        )
+        self._pubMapGoal= self.create_publisher(
+            Pose, '/moveto/globalgoal', 10
+        )
+        self._pubMapPrct= self.create_publisher(
+            Int16, '/map_prct_discovered', 10
         )
         #Subs
         self._subMap= self.create_subscription(
                 OccupancyGrid, '/map',
                 self.subMap_data_handler, 10
             )
+        #Timer callback
+        self._giveGoal= self.create_timer(
+            self.give_goal_time_step, self.give_goal
+        )
 
+    #Subs functions
     def subMap_data_handler(self,MapMsg):
         self.height=MapMsg.info.height
         self.width=MapMsg.info.width
         self.res=MapMsg.info.resolution
         self.origin=MapMsg.info.origin
         self.data=MapMsg.data
-        print('analysing')
+        print('analysing map data')
         message=Bool()
-        if self.get_completed_prct()>70:
-            print('à depasser 70%')
+        prct=self.get_completed_prct()
+        prct_message=Int16()
+        prct_message.data=int(prct)
+        self._pubMapPrct.publish(prct_message)
+        if prct>95:
+            print("map completed")
+            self.is_publishing_goal_pose=False
+        elif prct>40:
             message.data=True
             self._pubPathfindingState.publish(message)
+            self.is_publishing_goal_pose=True
         else:
-            print('pas encore à 70%')
             message.data=False
             self._pubPathfindingState.publish(message)
+            self.is_publishing_goal_pose=False
+
+    def give_goal(self):
+        if self.is_publishing_goal_pose:
+            print("publie un nouveau goal")
+            goal_options=self.get_pixel_touching_border()
+            #contour=self.contours(goal_options)
+            goal=self.take_goal_from_list(goal_options)
+            goal_x=self.origin.position.x+goal[1]*self.res
+            goal_y=self.origin.position.y+goal[0]*self.res
+            goal_pose=Pose()
+            goal_pose.position.x =goal_x
+            goal_pose.position.y = goal_y
+            print("x:"+str(goal_x))
+            print("y:"+str(goal_y))
+            self._pubMapGoal.publish(goal_pose)
+    
+    def take_goal_from_list(self,pixel_list):
+        return(random.choice(pixel_list))
 
     def get_completed_prct(self):
         compteur=0
@@ -55,30 +96,31 @@ class MapSubscriber(Node):
         return(compteur/(self.height*self.width)*100)
 
     def get_pixel_touching_border(self):
+        res_array=[]
         for i in range(self.height):
             for j in range(self.width):
                 pixel=self.find_pixel(i,j)
-                print(pixel)
-                if pixel==0:
-                    touching=self.check_around_pixel(i,j)
-                    print(str(pixel)+"coord"+str(i)+","+str(j))
-
+                if pixel==-1:
+                    if (self.check_around_pixel(i,j,0)):
+                        res_array.append([i,j])
+        return(res_array)
+                    
     def find_pixel(self,i,j):
        return(self.data[i*self.width+j])
 
-    def check_around_pixel(self,i,j):
+    def check_around_pixel(self,i,j,color):
         #check if pixels around (in a cross) the targeted pixel are white
         res=False
         if not i<=0:
-            if self.data[(i-1)*self.width+j]==-1:res=True
-        if not i>=self.height:
-            if self.data[(i+1)*self.width+j]==-1:res=True
+            if self.data[(i-1)*self.width+j]==color:res=True
+        if not i>=self.height-1:
+            if self.data[(i+1)*self.width+j]==color:res=True
         if not j<=0: 
-            if self.data[i*self.width+j-1]==-1:res=True
-        if not j>=self.width:
-            if self.data[i*self.width+j+1]==-1:res=True
+            if self.data[i*self.width+j-1]==color:res=True
+        if not j>=self.width-1:
+            if self.data[i*self.width+j+1]==color:res=True
         return(res)
 
 if __name__ == '__main__':
     main()
-    
+

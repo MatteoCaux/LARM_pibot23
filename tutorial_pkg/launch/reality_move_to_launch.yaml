@@ -1,11 +1,4 @@
 launch:
-###Simulateur
-#- include:
-#    file: "$(find-pkg-share tutorial_pkg)/scripts/test_move"
-#- include:
-#   file: "$(find-pkg-share stage_ros2)/launch/stage.launch.py"
-- include:
-   file: "$(find-pkg-share tbot_sim)/launch/challenge-1.launch.py"
 ###SLAM
 - include:
    file: "$(find-pkg-share slam_toolbox)/launch/online_async_launch.py"
@@ -14,7 +7,7 @@ launch:
    pkg: "rviz2"
    exec: "rviz2"
    name: "rviz2"
-   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_move_to.rviz --ros-args --remap use_sim_time:=True"
+   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_move_to.rviz --ros-args --remap"
 ###GOAL NODES
 # - node:
 #    pkg: "tutorial_pkg"
@@ -34,7 +27,7 @@ launch:
    exec: "pathfinding_tuto"
    name: "pathfinding_node"
    param:
-   - { name: "is_simulation", value: True }
+   - { name: "is_simulation", value: False}
    - { name: "tunnel_vision_width", value: 0.5 }
    
 - node:

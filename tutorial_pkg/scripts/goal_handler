@@ -18,7 +18,7 @@ def main():
     aNode.destroy_node()
     rclpy.shutdown()
 
-# on transforme une position dans 'odom' en une position dans 'base_link' (ca sera une position map in fine)
+# on transforme une position dans 'map' en une position dans 'base_link'
 class localGoal(Node):
     def __init__(self):
         super().__init__('localgoalTF')
@@ -99,8 +99,9 @@ class localGoal(Node):
         GlobalPoseMarker.color.r = 1.0
         GlobalPoseMarker.color.g = 0.0
         GlobalPoseMarker.color.b = 0.0
-        self._pubLocalPoseMarker.publish(LocalPoseMarker)
         self._pubGlobalPoseMarker.publish(GlobalPoseMarker)
+        self._pubLocalPoseMarker.publish(LocalPoseMarker)
+        
 
 if __name__ == '__main__':
     main()

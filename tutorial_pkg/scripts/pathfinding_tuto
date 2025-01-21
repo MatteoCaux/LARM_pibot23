@@ -15,25 +15,6 @@ def main():
     # Initialize ROS and a ROS node
     rclpy.init(args=sys.argv)
     node= Node( 'basic_move' )
-    node.declare_parameter('is_simulation',True)
-    node.declare_parameter('tunnel_vision_width',0.50)
-    node.declare_parameter('time_step_random_turn',20)
-
-    #Check if simulation
-    global cmd_robot_topic,scan_robot_topic,tunnel_vision_width,is_simulation,time_step_random_turn
-
-    is_simulation=node.get_parameter('is_simulation').value
-    tunnel_vision_width=node.get_parameter('tunnel_vision_width').value
-    time_step_random_turn=node.get_parameter('time_step_random_turn').value
-
-    if not is_simulation:
-        global WheelDropEvent, ButtonEvent
-        from kobuki_ros_interfaces.msg import WheelDropEvent, ButtonEvent
-        cmd_robot_topic='/multi/cmd_nav'
-        scan_robot_topic='/scan'
-    else:
-        cmd_robot_topic='/cmd_vel'
-        scan_robot_topic='/scan'#'/base_scan' depend version de stage ou du simulateur
 
     # Initialize our control:
     control= StraightCtrl()
@@ -54,6 +35,7 @@ class StraightCtrl :
         # Initialization                                           
         # Get logger from the node:
         self._logger = rosNode.get_logger()
+        #scan states
         self.obstacle_right_close=False
         self.obstacle_left_close=False
         self.obstacle_right_far=False
@@ -61,19 +43,44 @@ class StraightCtrl :
         self.obstacle_full_left_far=False
         self.obstacle_full_right_far=False
         self.no_scan=True
+
+        #init commandes 
         self.previous_z=0.5
         self.previous_x=0.15
-        self.previous_message=""
+        #init topics
         self.cmd_robot_topic=''
         self.scan_robot_topic=''
+        #init function states variables
         self._emergency_stop=False
         self.random_turning=False
+        self.move_to_command=False
+
+        #init localGoal
         self.localGoal=Pose()
-        self.localGoal.position.x=-3
-        self.localGoal.position.y=6
+        self.localGoal.position.x=0
+        self.localGoal.position.y=0
         self.theta_goal=atan2(self.localGoal.position.y,self.localGoal.position.x)
         self.distance_goal=sqrt(self.localGoal.position.y**2+self.localGoal.position.x**2)
-        self.move_to_command=False
+
+        #declare parameter to read
+        rosNode.declare_parameter('is_simulation',True)
+        rosNode.declare_parameter('tunnel_vision_width',0.50)
+        rosNode.declare_parameter('time_step_random_turn',20)
+        #read the parameters
+        self.is_simulation=rosNode.get_parameter('is_simulation').value
+        self.tunnel_vision_width=rosNode.get_parameter('tunnel_vision_width').value
+        self.time_step_random_turn=rosNode.get_parameter('time_step_random_turn').value
+
+        #simulation check
+        if not self.is_simulation:
+            global WheelDropEvent, ButtonEvent
+            from kobuki_ros_interfaces.msg import WheelDropEvent, ButtonEvent
+            cmd_robot_topic='/multi/cmd_nav'
+            scan_robot_topic='/scan'
+        else:
+            cmd_robot_topic='/cmd_vel'
+            scan_robot_topic='/scan'#'/base_scan' depend version de stage ou du simulateur
+
         # Initialize publisher:
         self._pubVelocity= rosNode.create_publisher(
             Twist, cmd_robot_topic, 10
@@ -88,7 +95,7 @@ class StraightCtrl :
             Pose, "/moveto/localgoal" ,
             self.local_goal_msg, 10
         )
-        if not is_simulation:                                                                         #if the robot is tested in real life
+        if not self.is_simulation:                                                                         #if the robot is tested in real life
             self.sub_bouton=rosNode.create_subscription(ButtonEvent,'events/button',self.button,10)
             self._subToWheelDrop= rosNode.create_subscription(
                 WheelDropEvent, '/events/wheel_drop',
@@ -104,9 +111,10 @@ class StraightCtrl :
             0.05, self.global_control
         )
         self._randomTurn= rosNode.create_timer(
-            time_step_random_turn, self.random_turn
+            self.time_step_random_turn, self.random_turn
         )
 
+    #Subs functions
     def move_to_sub(self,msg):
         self.move_to_command=msg.data
 
@@ -121,36 +129,123 @@ class StraightCtrl :
     def scan_callback(self, scanMsg ):
         #self._logger.info( '> get scan' )
         self.process_scan_data(scanMsg)
-
-    def random_turn(self):
-        if  not self._emergency_stop and not self.move_to_command:
+        #urgent stop
+    
+    def wheel_drop(self,msg):
+        # if msg.state==0:
+        #     self._emergency_stop=False
+        if msg.state==1:
             velocity=Twist()
-            self.random_turning=True
-            direction=rd.randint(1,2)         #définition de si le virage se fera à gauche ou à droite
-            angle_value=rd.randint(30,180)    #angle du virage (entre 30 et 180)
-            if direction==1:angle=-angle_value
-            if direction==2:angle=angle_value
-            print("Tour aléatoire : je commence un tour d'un angle de"+str(angle)+"degrès")
-            while self.previous_x>0.0 and not self._emergency_stop:
-                velocity.linear.x=self.smooth_speed_target(0.0,0.03)
-                self.previous_x=velocity.linear.x
-                self._pubVelocity.publish(velocity)
-            self.turn_by_given_angle(angle,0.7)
-            while self.previous_x<0.1 and not self._emergency_stop:
-                velocity.linear.x=self.smooth_speed_target(0.5,0.02)
-                self.previous_x=velocity.linear.x
-                self._pubVelocity.publish(velocity)
-            self.random_turning=False
+            velocity.linear.x = 0.0 #m/s
+            velocity.angular.z = 0.0 #rad/s
+            self._pubVelocity.publish(velocity)
+            self._emergency_stop=True
+
+    def button(self,msg):
+        if msg.state == 1:
+            self._emergency_stop=False
+
+    #================================================================#
+    # Definition of the position of the obstacle from the LIDAR data #
+    #================================================================#
+    def process_scan_data(self,scanMsg):
+        #Initialization
+        self.obstacle_right_close=False
+        self.obstacle_left_close=False
+        self.obstacle_right_far=False
+        self.obstacle_left_far=False
+        self.obstacle_full_left_far=False
+        self.obstacle_full_right_far=False
+        self.totalmindistance=100
+        self.maxdistance=0
+        self.mindistance=100
+        self.full_right_min=100
+        self.full_left_min=100
+        # The robot looks in a 40cm tunnel in front of him
+        scan_tunnel_d=self.tunnel_vision_width
+
+        if scanMsg is not None : 
+            self.no_scan=False
+            angle= scanMsg.angle_min
+            if self.move_to_command: self.find_obstacles_to_goal(scanMsg) #if move to , add some scanning
+            for aDistance in scanMsg.ranges :
+
+                #for each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)    
+                if 0.1 < aDistance:
+                    if aDistance < 1.1 :
+                        if self.totalmindistance>aDistance:self.totalmindistance=aDistance
+                        if aDistance<0.35:
+                            if angle <0 and angle >-1.35:
+                                self.obstacle_right_close=True
+                            if angle >0 and angle <1.35:
+                                self.obstacle_left_close=True
+                        else:
+                            if angle <0 and angle >-1:
+                                if scan_tunnel_d/(2*sin(-angle))>=aDistance:
+                                    self.obstacle_right_far=True
+                                    if self.maxdistance<aDistance: self.maxdistance=aDistance
+                                    if self.mindistance>aDistance: self.mindistance=aDistance   
+                            if angle >0 and angle <1:
+                                if scan_tunnel_d/(2*sin(angle))>=aDistance:
+                                    self.obstacle_left_far=True
+                                    if self.maxdistance<aDistance: self.maxdistance=aDistance
+                                    if self.mindistance>aDistance: self.mindistance=aDistance
+
+                    #we also look if there are obstacles at 90 degres on each side of the robot
+                    if aDistance<3:
+                        if angle<-1.39 and angle >-1.55:
+                            self.obstacle_full_right_far=True
+                            if self.full_right_min>aDistance:self.full_right_min=aDistance
+                        if angle>1.39 and angle <1.55:
+                            self.obstacle_full_left_far=True
+                            if self.full_left_min>aDistance:self.full_left_min=aDistance
+                angle+= scanMsg.angle_increment
+        else : 
+            self.no_scan=True
+            print("Scan not found, exit")
+
+    def find_obstacles_to_goal(self,scanMsg): # a finir
+        self.goal_straight_line_obstacle=False
+        self.goal_obstacle_right_far=False
+        self.goal_obstacle_left_far=False
+        in_range=False
+        angle= scanMsg.angle_min
+        for aDistance in scanMsg.ranges:
+            if 0.1 < aDistance:
+                if self.theta_goal >scanMsg.angle_min+0.785398 and self.theta_goal <scanMsg.angle_max-0.785398 :
+                    #Check if theta_goal is somewhere in range and find between which increment
+                    if self.theta_goal>angle and self.theta_goal < angle+scanMsg.angle_increment:
+                        self.theta_goal=angle
+                        in_range=True # Goal is in the scan angle range
+                        #Check if there is an obstacle before the goal on the straight line
+                        if aDistance<self.distance_goal:
+                            self.goal_straight_line_obstacle=True
+                        #Check for obstacle around the straight line
+                        angle_goal=scanMsg.angle_min
+                        for aDistance_goal in scanMsg.ranges:
+                            if 0.1 < aDistance_goal and aDistance_goal<self.distance_goal:
+                                if angle_goal <self.theta_goal and angle_goal >self.theta_goal-1.5708:
+                                    if (self.tunnel_vision_width+10)/(2*sin(abs(angle_goal)))>=aDistance_goal:
+                                        self.goal_obstacle_right_far=True
+                                if angle_goal >self.theta_goal and angle_goal <self.theta_goal+1.5708:
+                                    if (self.tunnel_vision_width+10)/(2*sin(abs(angle_goal)))>=aDistance_goal:
+                                        self.goal_obstacle_left_far=True
+                            angle_goal+=scanMsg.angle_increment
+            angle+= scanMsg.angle_increment
+        if not in_range:
+            print("goal is not aligned with scan range")
+            self.goal_straight_line_obstacle=True
+        else: print("goal is in range")
+
+    ######################
+    # robot control #
+    ######################
 
     def global_control(self):
         if self.move_to_command:
             self.control_callback_move_to()
         else:self.control_callback()
-
-    ######################
-    # No goal is defined #
-    ######################
-
+    #for random reactive
     def control_callback(self):
         #Reactive reaction to environment
         if not self.random_turning:                                                        #if the robot isn't in a random turn
@@ -167,7 +262,6 @@ class StraightCtrl :
                 print("no scan/emergency stop")
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z = 0.0 #rad/s
-                self._pubVelocity.publish(velocity)
 
             #======================================#
             # Second case : something is too close #
@@ -176,7 +270,6 @@ class StraightCtrl :
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z  = 0.5
-                self._pubVelocity.publish(velocity)
 
             #=================================#
             # Third case : something is close #
@@ -229,13 +322,6 @@ class StraightCtrl :
 
                 if velocity.linear.x<0.0:velocity.linear.x=0.0                               #avoiding errors
 
-                #previous values
-                self.previous_z=velocity.angular.z
-                self.previous_x=velocity.linear.x
-
-                #publishing
-                self._pubVelocity.publish(velocity)
-
             #================================#
             # Fourth case : something is far #
             #================================#
@@ -284,14 +370,6 @@ class StraightCtrl :
                     velocity.linear.x=self.smooth_speed_target(0.15,0.03)
                     #the robot goes to the linear speed of 0.15 smoothly
                     
-
-                #previous values
-                self.previous_z=velocity.angular.z
-                self.previous_x=velocity.linear.x
-
-                #publishing
-                self._pubVelocity.publish(velocity)
-
             #===================================#
             # Fifth case : no obstacle in front #
             #===================================#
@@ -300,11 +378,180 @@ class StraightCtrl :
                 velocity.angular.z = 0.0#rad/s
                 velocity.linear.x=self.smooth_speed_target(0.7,0.02)
                 message+="state 0:no obstacles\n"
+
+            #previous values
+            self.previous_z=velocity.angular.z
+            self.previous_x=velocity.linear.x
+            #publishing
+            self._pubVelocity.publish(velocity)
+
+            #=============================#
+            # Print the current situation #
+            #=============================#
+            #printing if there are obstacles and where and the current linear and rotative speeds
+            message+=str(self.obstacle_left_far)+","+str(self.obstacle_right_far)+"\n"+str(self.obstacle_left_close)+","+str(self.obstacle_right_close)+"\n"+str(self.obstacle_full_left_far)+","+str(self.obstacle_full_right_far)+"\n"+"speed:"+str(self.previous_x)+"    rotation:"+str(self.previous_z)
+
+            print("#----------------#")
+            print(message)
+            print("|----------------|")
+    #for move to
+    def control_callback_move_to(self):
+        #Reactive reaction to environment
+        if not self.random_turning:                                                        #if the robot isn't in a random turn
+            #self._logger.info( '< define control' )
+            velocity=Twist()
+            velocity.angular.z = self.previous_z #rad/s
+            base_angular_speed=0.7                                                         #rotation speed
+            message=""
+
+            #=================================#
+            # First case : nothing is scanned #
+            #=================================#
+            if self.no_scan or self._emergency_stop:                                       #if nothing is scanned, the robot stop
+                print("no scan/emergency stop")
+                velocity.linear.x = 0.0 #m/s
+                velocity.angular.z = 0.0 #rad/s
+
+            elif self.distance_goal<0.1:
+                print('goal atteint')
+                velocity.linear.x = 0.0 #m/s
+                velocity.angular.z = 0.0 #rad/s                                                #the robot stop              
+
+            #======================================#
+            # Second case : something is too close #
+            #======================================#
+            elif self.totalmindistance<0.15:                                                #if an object is too close, the robot can only rotate on itself
+                message+="object to close, turning around\n"
+                velocity.linear.x = 0.0 #m/s
+                velocity.angular.z  = 0.5
+
+            #=================================#
+            # Third case : something is close #
+            #=================================#
+            elif self.obstacle_right_close or self.obstacle_left_close:                     #something is close
+                #We look at the situation (where are the obstacles) and we choose where to move
+
+                # 1) something is close both on the right and on the left
+                if self.obstacle_right_close and self.obstacle_left_close:                  
+                    message+="state3:close obstacle both directions\n"
+
+                    # is there an obstacle 90° far ?
+                    if self.obstacle_full_left_far and not self.obstacle_full_right_far:    #also there is something far on the right but not on the left
+                        message+="choosed to go right\n"                                    #so the robot go to the right
+                        velocity.angular.z = -base_angular_speed #rad/s 
+                    if self.obstacle_full_right_far and not self.obstacle_full_left_far:    #also there is something far on the left but not on the right
+                        message+="choosed to go left\n"                                     #so the robot go to the left
+                        velocity.angular.z=base_angular_speed
+                    #We adapt our speed to the current one
+                    if velocity.angular.z==0:                                               #if its the first turn and there is not one far side triggered, the robot go to the left
+                        velocity.angular.z=base_angular_speed                  
+                    
+                    velocity.linear.x=self.smooth_speed_target(0.0,0.025)
+                    
+                # 2) something is close on the right but not on the left    
+                elif self.obstacle_right_close and not self.obstacle_left_close:
+                    message+="state1:close obstacle right\n"
+
+                    #We adapt our speed to the current one
+                    velocity.linear.x=self.smooth_speed_target(0.0,0.025)
+
+                    #is there something far on the left ?    
+                    if not self.obstacle_full_left_far:                                      #if not the robot turn to the left
+                        velocity.angular.z = base_angular_speed #rad/s
+                    if velocity.angular.z==0:
+                        velocity.angular.z=base_angular_speed
+
+                # 3) something is close on the left but not on the right        
+                elif self.obstacle_left_close and not self.obstacle_right_close:
+                    message+="state2:close obstacle left\n"
+
+                    #We adapt our speed to the current one              
+                    velocity.linear.x=self.smooth_speed_target(0.0,0.02)
+
+                    #is there something far on the right ?     
+                    if not self.obstacle_full_right_far:                                     #if not the robot turn to the right
+                        velocity.angular.z = -base_angular_speed #rad/s
+                    if velocity.angular.z==0:
+                        velocity.angular.z=-base_angular_speed
+
+                if velocity.linear.x<0.0:velocity.linear.x=0.0                               #avoiding errors
+
+            #================================#
+            # Fourth case : something is far #
+            #================================#
+            elif self.obstacle_right_far or self.obstacle_left_far:
+                #We look at the situation (where are the obstacles) and we choose where to move
+
+                # 1) something is far on the right but not on the left  
+                if self.obstacle_right_far and not self.obstacle_left_far:
+                    message+="state4:far obstacle right\n"
+
+                    #the robot goes to the linear speed of 0.2 smoothly
+                    velocity.linear.x=self.smooth_speed_target(0.2,0.02)
+
+                    #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
+                    velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s                    the robot goes to the left
+    
+                # 2) something is far on the left but not on the right  
+                elif self.obstacle_left_far and not self.obstacle_right_far:
+                    message+="state5:far obstacle left\n"
+
+                    #the robot goes to the linear speed of 0.2 smoothly
+                    velocity.linear.x=self.smooth_speed_target(0.2,0.02)
+
+                    #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
+                    velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s                   the robot goes to the right
+
+                # 3) something is far both on the right and the left
+                
+                elif self.obstacle_right_far and self.obstacle_left_far:
+                    message+="state6:far obstacle both directions\n"
+
+                    #there is something at 90 degres on the left and not on the right
+                    if self.obstacle_full_left_far and not self.obstacle_full_right_far:
+                        velocity.angular.z = -base_angular_speed #rad/s                            the robot goes to the right
+                    
+                    #there is something at 90 degres on the right and not on the left
+                    if self.obstacle_full_right_far and not self.obstacle_full_left_far:
+                        velocity.angular.z=base_angular_speed #rad/s                               the robot goes to the left
+
+                    #there is something at 90 degres on the right and the left
+                    if self.obstacle_full_right_far and self.obstacle_full_left_far:
+                        if self.full_right_min<self.full_left_min:
+                            velocity.angular.z=base_angular_speed #rad/s                           the robot goes to the left
+                        else:
+                            velocity.angular.z = -base_angular_speed #rad/s                        the robot goes to the right
+                    velocity.linear.x=self.smooth_speed_target(0.15,0.03)
+                    #the robot goes to the linear speed of 0.15 smoothly
+            
+            #===============================================#
+            # Fifth case : the goal can be reached directly #
+            #===============================================#
+            elif not (self.goal_straight_line_obstacle or self.goal_obstacle_right_far or self.goal_obstacle_left_far):#si rien vers le goal
+                message+="state7 : le goal est libre d'accès\n"
+                message+="capteur vers goal"+str(self.goal_obstacle_left_far)+str(self.goal_straight_line_obstacle)+str(self.goal_obstacle_right_far)+"\n"
+                if abs(self.theta_goal)>0.08726: #si pas bien oriente
+                    velocity.angular.z = self.orientate_to_goal() #s'oriente vers le goal
+                    velocity.linear.x = self.smooth_speed_target(0.0,0.02) #m/s
+                    message+="le goal n'est pas directement en face, turning on himself\n"
+                else:#si bien oriente
+                    velocity.linear.x=self.smooth_speed_target(self.speed_to_goal(self.distance_goal),0.02)#go vers le goal
+                    message+="le goal est en face, going forward\n"
+    
+            #===================================#
+            # Fifth case : no obstacle in front #
+            #===================================#
+            else:
+                #the robot goes forward
+                velocity.angular.z = self.orientate_to_goal()#rad/s
+                velocity.linear.x=self.smooth_speed_target(0.6,0.012)
+                message+="state 0:no obstacles\n"
                 #previous values
-                self.previous_z=velocity.angular.z
-                self.previous_x=velocity.linear.x
-                #publishing
-                self._pubVelocity.publish(velocity)
+
+            self.previous_z=velocity.angular.z
+            self.previous_x=velocity.linear.x
+            #publishing
+            self._pubVelocity.publish(velocity)
 
             #=============================#
             # Print the current situation #
@@ -313,283 +560,11 @@ class StraightCtrl :
             message+=str(self.obstacle_left_far)+","+str(self.obstacle_right_far)+"\n"+str(self.obstacle_left_close)+","+str(self.obstacle_right_close)+"\n"+str(self.obstacle_full_left_far)+","+str(self.obstacle_full_right_far)+"\n"+"speed:"+str(self.previous_x)+"    rotation:"+str(self.previous_z)
 
             #the message is printed only if it is different from the previous one
-            if True: # self.previous_message!=message:
-                print("#----------------#")
-                print(message)
-                print("|----------------|")
-            self.previous_message=message
-         
+            print("#----------------#")
+            print(message)
+            print("|----------------|")
 
-    #####################
-    # A goal is defined #
-    #####################
-
-    def control_callback_move_to(self):
-        velocity=Twist()
-        velocity.angular.z = self.previous_z #rad/s
-        base_angular_speed=0.4                                                             #rotation speed 
-        velocity=Twist()
-        print("------start------")
-        #=================================#
-        # First case : nothing is scanned #
-        #=================================#
-
-        if self.no_scan or self._emergency_stop: 
-            print("state0 : no scan/emergency stop, je m'arrete")
-            velocity.linear.x = 0.0 #m/s
-            velocity.angular.z = 0.0 #rad/s
-
-        #===================================#
-        # Second case : the goal is reached #
-        #===================================#
-
-        elif self.distance_goal<0.1:
-            print('goal atteint')
-            velocity.linear.x = 0.0 #m/s
-            velocity.angular.z = 0.0 #rad/s                                                #the robot stop              
-
-        #=====================================#
-        # Third case : an object is too close #
-        #=====================================#
-
-        elif self.totalmindistance<0.15:
-            print("state1 : object to close,turning around")         #if an object is too close, the robot can only rotate on itself
-            velocity.linear.x = 0.0 #m/s
-            velocity.angular.z  = 0.5
-
-        #==============================================#
-        # Fourth case : there aren't an obstacle close #
-        #==============================================#
-
-        elif not (self.obstacle_right_close or self.obstacle_left_close ):                 #the robot goes in the direction of the goal
-            print("State1.2: je vais vers le goal car pas d'obstacle direct")
-            if abs(self.theta_goal)>0.08726: #si pas bien oriente
-                velocity.angular.z = self.orientate_to_goal() #s'oriente vers le goal
-                velocity.linear.x=self.smooth_speed_target(0.2,0.02)
-                print("le goal n'est pas directement en face, turning on himself")
-            else:#si bien oriente
-                velocity.linear.x=self.smooth_speed_target(self.speed_to_goal(self.distance_goal),0.02)#go vers le goal
-                print("le goal est en face, going forward")
-
-        #===============================================#
-        # Fifth case : the goal can be reached directly #
-        #===============================================#
-
-        elif not (self.goal_straight_line_obstacle or self.goal_obstacle_right_far or self.goal_obstacle_left_far):#si rien vers le goal
-            print("state2 : le goal est libre d'accès")
-            if abs(self.theta_goal)>0.08726: #si pas bien oriente
-                velocity.angular.z = self.orientate_to_goal() #s'oriente vers le goal
-                velocity.linear.x = self.smooth_speed_target(0.2,0.02) #m/s
-                print(velocity.angular.z)
-                print("le goal n'est pas directement en face, turning on himself")
-            else:#si bien oriente
-                velocity.linear.x=self.smooth_speed_target(self.speed_to_goal(self.distance_goal),0.02)#go vers le goal
-                print("le goal est en face, going forward")
-
-        #====================================#
-        # Sixth case : an obstacle  is close #
-        #====================================#
-
-        elif self.obstacle_right_close or self.obstacle_left_close:
-            #We look at the situation (where are the obstacles) and we choose where to move
-            # 1) something is close both on the right and on the left
-            if self.obstacle_right_close and self.obstacle_left_close:                  
-                print("state3:close obstacle both directions\n")
-                # is there an obstacle 90° far ?
-                if self.obstacle_full_left_far and not self.obstacle_full_right_far:    #also there is something far on the right but not on the left
-                    print("choosed to go right\n")                                      #so the robot go to the right
-                    velocity.angular.z = -base_angular_speed #rad/s 
-                if self.obstacle_full_right_far and not self.obstacle_full_left_far:    #also there is something far on the left but not on the right
-                    print("choosed to go left\n" )                                      #so the robot go to the left
-                    velocity.angular.z=base_angular_speed
-                if velocity.angular.z==0:                                               #if its the first turn and there is not one far side triggered, the robot go to the left
-                    print("angular speed was at 0,putted +0.4")
-                    velocity.angular.z=base_angular_speed                  
-                
-                velocity.linear.x=self.smooth_speed_target(0.1,0.02)#We adapt our speed to the current one
-                
-            # 2) something is close on the right but not on the left    
-            elif self.obstacle_right_close and not self.obstacle_left_close:
-                print("state1:close obstacle right\n")
-
-                #We adapt our speed to the current one
-                velocity.linear.x=self.smooth_speed_target(0.1,0.02)
-
-                #is there something far on the left ?    
-                if not self.obstacle_full_left_far:                                      #if not the robot turn to the left
-                    velocity.angular.z = base_angular_speed #rad/s
-                if velocity.angular.z==0:
-                    velocity.angular.z=base_angular_speed
-
-            # 3) something is close on the left but not on the right        
-            elif self.obstacle_left_close and not self.obstacle_right_close:
-                print("state2:close obstacle left\n")
-
-                #We adapt our speed to the current one              
-                velocity.linear.x=self.smooth_speed_target(0.1,0.02)
-
-                #is there something far on the right ?     
-                if not self.obstacle_full_right_far:                                     #if not the robot turn to the right
-                    velocity.angular.z = -base_angular_speed #rad/s
-                if velocity.angular.z==0:
-                    velocity.angular.z=-base_angular_speed
-
-            if velocity.linear.x<0.0:velocity.linear.x=0.0                               #avoiding errors
-        #=================================#
-        # Seventh case : something is far #
-        #=================================#
-        
-        elif self.obstacle_right_far or self.obstacle_left_far:
-            #We look at the situation (where are the obstacles) and we choose where to move
-
-            # 1) something is far on the right but not on the left  
-            if self.obstacle_right_far and not self.obstacle_left_far:
-                print("state4:far obstacle right\n")
-
-                #the robot goes to the linear speed of 0.2 smoothly
-                velocity.linear.x=self.smooth_speed_target(0.2,0.02)
-
-                #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                velocity.angular.z = -0.83*self.mindistance+1.45 #rad/s                    the robot goes to the left
-
-            # 2) something is far on the left but not on the right  
-            elif self.obstacle_left_far and not self.obstacle_right_far:
-                print("state5:far obstacle left\n")
-
-                #the robot goes to the linear speed of 0.2 smoothly
-                velocity.linear.x=self.smooth_speed_target(0.2,0.02)
-
-                #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                velocity.angular.z = -(-0.83*self.mindistance+1.45) #rad/s                   the robot goes to the right
-
-            # 3) something is far both on the right and the left
-            
-            elif self.obstacle_right_far and self.obstacle_left_far:
-                print("state6:far obstacle both directions\n")
-
-                #there is something at 90 degres on the left and not on the right
-                if self.obstacle_full_left_far and not self.obstacle_full_right_far:
-                    velocity.angular.z = -base_angular_speed #rad/s                            the robot goes to the right
-                
-                #there is something at 90 degres on the right and not on the left
-                if self.obstacle_full_right_far and not self.obstacle_full_left_far:
-                    velocity.angular.z=base_angular_speed #rad/s                               the robot goes to the left
-
-                #there is something at 90 degres on the right and the left
-                if self.obstacle_full_right_far and self.obstacle_full_left_far:
-                    if self.full_right_min<self.full_left_min:
-                        velocity.angular.z=base_angular_speed #rad/s                           the robot goes to the left
-                    else:
-                        velocity.angular.z = -base_angular_speed #rad/s                        the robot goes to the right
-                velocity.linear.x=self.smooth_speed_target(0.15,0.03)
-                #the robot goes to the linear speed of 0.15 smoothly
-        else:
-            print("rien: j'avance tout droit")
-            velocity.linear.x=self.smooth_speed_target(0.7,0.02)
-        
-        #previous values
-        self.previous_z=velocity.angular.z
-        self.previous_x=velocity.linear.x
-        print(self.theta_goal)
-        print(self.distance_goal)
-        print(velocity.angular.z)
-        print(velocity.linear.x)
-        print("---------end---------")
-        self._pubVelocity.publish(velocity)
-
-    #================================================================#
-    # Definition of the position of the obstacle from the LIDAR data #
-    #================================================================#
-    def process_scan_data(self,scanMsg):
-        #Initialization
-        self.obstacle_right_close=False
-        self.obstacle_left_close=False
-        self.obstacle_right_far=False
-        self.obstacle_left_far=False
-        self.obstacle_full_left_far=False
-        self.obstacle_full_right_far=False
-        self.totalmindistance=100
-        self.maxdistance=0
-        self.mindistance=100
-        self.full_right_min=100
-        self.full_left_min=100
-        # The robot looks in a 40cm tunnel in front of him
-        scan_tunnel_d=tunnel_vision_width
-
-        if scanMsg is not None : 
-            self.no_scan=False
-            angle= scanMsg.angle_min
-            self.find_obstacles_to_goal(scanMsg)
-            for aDistance in scanMsg.ranges :
-
-                #for each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)    
-                if 0.1 < aDistance:
-                    if aDistance < 1.1 :
-                        if self.totalmindistance>aDistance:self.totalmindistance=aDistance
-                        if aDistance<0.35:
-                            if angle <0 and angle >-1.35:
-                                self.obstacle_right_close=True
-                            if angle >0 and angle <1.35:
-                                self.obstacle_left_close=True
-                        else:
-                            if angle <0 and angle >-1:
-                                if scan_tunnel_d/(2*sin(-angle))>=aDistance:
-                                    self.obstacle_right_far=True
-                                    if self.maxdistance<aDistance: self.maxdistance=aDistance
-                                    if self.mindistance>aDistance: self.mindistance=aDistance   
-                            if angle >0 and angle <1:
-                                if scan_tunnel_d/(2*sin(angle))>=aDistance:
-                                    self.obstacle_left_far=True
-                                    if self.maxdistance<aDistance: self.maxdistance=aDistance
-                                    if self.mindistance>aDistance: self.mindistance=aDistance
-
-                    #we also look if there are obstacles at 90 degres on each side of the robot
-                    if aDistance<3:
-                        if angle<-1.39 and angle >-1.55:
-                            self.obstacle_full_right_far=True
-                            if self.full_right_min>aDistance:self.full_right_min=aDistance
-                        if angle>1.39 and angle <1.55:
-                            self.obstacle_full_left_far=True
-                            if self.full_left_min>aDistance:self.full_left_min=aDistance
-                angle+= scanMsg.angle_increment
-        else : 
-            self.no_scan=True
-            print("Scan not found, exit")
-
-    def find_obstacles_to_goal(self,scanMsg): # a finir
-        self.goal_straight_line_obstacle=False
-        self.goal_obstacle_right_far=False
-        self.goal_obstacle_left_far=False
-        in_range=False
-        #a FINIR LE PROBLEME DE L'ANGLE MORT
-        angle= scanMsg.angle_min
-        for aDistance in scanMsg.ranges:
-            if 0.1 < aDistance:
-                if self.theta_goal >scanMsg.angle_min+0.785398 and self.theta_goal <scanMsg.angle_max-0.785398 :
-                    #Check if theta_goal is somewhere in range and find between which increment
-                    if self.theta_goal>angle and self.theta_goal < angle+scanMsg.angle_increment:
-                        self.theta_goal=angle
-                        in_range=True # Goal is in the scan angle range
-                        #Check if there is an obstacle before the goal on the straight line
-                        if aDistance<self.distance_goal:
-                            self.goal_straight_line_obstacle=True
-                        #Check for obstacle around the straight line
-                        angle_goal=scanMsg.angle_min
-                        for aDistance_goal in scanMsg.ranges:
-                            if 0.1 < aDistance_goal and aDistance_goal<self.distance_goal:
-                                if angle_goal <self.theta_goal and angle_goal >self.theta_goal-1.5708:
-                                    if (tunnel_vision_width+5)/(2*sin(abs(angle_goal)))>=aDistance_goal:
-                                        self.goal_obstacle_right_far=True
-                                if angle_goal >self.theta_goal and angle_goal <self.theta_goal+1.5708:
-                                    if (tunnel_vision_width+5)/(2*sin(abs(angle_goal)))>=aDistance_goal:
-                                        self.goal_obstacle_left_far=True
-                            angle_goal+=scanMsg.angle_increment
-            angle+= scanMsg.angle_increment
-        if not in_range:
-            print("goal is not aligned with scan range")
-        else: print("goal is in range")
-
-    # speed function
+    # speed function, with the previous x and z stored variables
     def smooth_speed_target(self,target:float,step:float):
         velocity=Twist()
         if self.previous_x>target+15*step:                                          #if the robot was moving fast, it slows hardly
@@ -601,6 +576,27 @@ class StraightCtrl :
         else:                                                                   #if the robot was not moving, it continue
             velocity.linear.x=target
         return(velocity.linear.x)
+    
+    #random turn functions callback
+    def random_turn(self):
+        if not self._emergency_stop and not self.move_to_command :
+            velocity=Twist()
+            self.random_turning=True
+            direction=rd.randint(1,2)         #définition de si le virage se fera à gauche ou à droite
+            angle_value=rd.randint(30,180)    #angle du virage (entre 30 et 180)
+            if direction==1:angle=-angle_value
+            if direction==2:angle=angle_value
+            while self.previous_x>0.0 and not self._emergency_stop:
+                velocity.linear.x=self.smooth_speed_target(0.0,0.03)
+                self.previous_x=velocity.linear.x
+                self._pubVelocity.publish(velocity)
+            print("Tour aléatoire : je commence un tour d'un angle de"+str(angle)+"degrès")
+            self.turn_by_given_angle(angle,0.7)
+            while self.previous_x<0.1 and not self._emergency_stop:
+                velocity.linear.x=self.smooth_speed_target(0.5,0.02)
+                self.previous_x=velocity.linear.x
+                self._pubVelocity.publish(velocity)
+            self.random_turning=False
 
     def turn_by_given_angle(self,deg,angular_speed):
         velocity=Twist()
@@ -619,21 +615,8 @@ class StraightCtrl :
             self.previous_z=velocity.angular.z
             #Publish
             self._pubVelocity.publish(velocity)
-
-    def wheel_drop(self,msg):
-        # if msg.state==0:
-        #     self._emergency_stop=False
-        if msg.state==1:
-            velocity=Twist()
-            velocity.linear.x = 0.0 #m/s
-            velocity.angular.z = 0.0 #rad/s
-            self._pubVelocity.publish(velocity)
-            self._emergency_stop=True
-
-    def button(self,msg):
-        if msg.state == 1:
-            self._emergency_stop=False
-
+    
+    #goal consign function helper
     def speed_to_goal(self,distance):
         speed=distance*0.7
         if speed>0.7:speed=0.7
@@ -643,14 +626,14 @@ class StraightCtrl :
     def orientate_to_goal(self):
         precision=0.08726
         if self.theta_goal>precision*3:
-            rad_speed=0.3
+            rad_speed=0.7
         elif self.theta_goal<-precision*3:
-            rad_speed=-0.3
+            rad_speed=-0.7
     
         elif self.theta_goal>precision:
-            rad_speed=0.1
+            rad_speed=0.3
         elif self.theta_goal<-precision:
-            rad_speed=-0.1
+            rad_speed=-0.3
         else:
             rad_speed=0.0
         return(rad_speed)
