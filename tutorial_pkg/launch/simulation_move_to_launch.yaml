@@ -14,7 +14,7 @@ launch:
    pkg: "rviz2"
    exec: "rviz2"
    name: "rviz2"
-   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_simu_move_to_gazebo.rviz --ros-args --remap use_sim_time:=True"
+   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_move_to.rviz --ros-args --remap use_sim_time:=True"
 ###GOAL NODES
 - node:
    pkg: "tutorial_pkg"

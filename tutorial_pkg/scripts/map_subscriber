@@ -41,7 +41,7 @@ class MapSubscriber(Node):
             message.data=True
             self._pubPathfindingState.publish(message)
         else:
-            print('pas enocre à 70%')
+            print('pas encore à 70%')
             message.data=False
             self._pubPathfindingState.publish(message)
 
