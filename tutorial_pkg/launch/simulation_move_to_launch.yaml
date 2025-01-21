@@ -5,7 +5,7 @@ launch:
 #- include:
 #   file: "$(find-pkg-share stage_ros2)/launch/stage.launch.py"
 - include:
-   file: "$(find-pkg-share tbot_sim)/launch/challenge-1.launch.py"
+   file: "$(find-pkg-share tbot_sim)/launch/challenge-2.launch.py"
 ###SLAM
 - include:
    file: "$(find-pkg-share slam_toolbox)/launch/online_async_launch.py"
