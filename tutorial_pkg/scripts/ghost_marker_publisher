@@ -4,6 +4,7 @@ from  rclpy.node import Node
 # from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Point32, Pose
 from visualization_msgs.msg import Marker
+from kobuki_ros_interfaces.msg import Sound
 # import sys
 # import scan_echo
 import tf2_ros
@@ -31,6 +32,8 @@ class Ghost_Marker(Node):
             Point32, '/ghost_center',
             self.Ghost_listener, 10
         )
+
+        self._pubSound = self.create_publisher(Sound,'/commands/sound',10)
 
         self.create_timer(0.1, self.publish_markers)
 
@@ -94,6 +97,9 @@ class Ghost_Marker(Node):
                 GhostMarker.color.b = 0.0
 
                 self._pubGhostMarker.publish(GhostMarker)
+                sound=Sound
+                sound.value = 3
+                self._pubSound.publish(sound)
     
     def deg2rad(angle):
         return (angle * 2 * np.pi)/360.0
