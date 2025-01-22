@@ -22,6 +22,7 @@ install( PROGRAMS scripts/global_goal_publisher DESTINATION lib/${PROJECT_NAME} 
 install( PROGRAMS scripts/map_subscriber DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/ghost_marker_publisher DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS scripts/pacman_marker_publisher DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS scripts/operator_node DESTINATION lib/${PROJECT_NAME} )
 
 # Install resource files.
 install(DIRECTORY

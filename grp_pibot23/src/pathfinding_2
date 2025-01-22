@@ -135,10 +135,8 @@ class StraightCtrl :
 
     def manual_mode_sub(self,msg):
         self.manual_mode=msg.data
-        print("manual mode")
         print(self.manual_mode)
         if self.manual_mode and not self.already_stopped:
-            print('set')
             velocity=Twist()
             #previous values
             self.previous_z=0
@@ -147,7 +145,6 @@ class StraightCtrl :
             self._pubVelocity.publish(velocity)
             self.already_stopped=True
         if not self.manual_mode:
-            print('unset')
             self.already_stopped=False
 
     def local_goal_msg(self,msg):

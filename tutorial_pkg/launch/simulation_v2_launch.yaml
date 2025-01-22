@@ -29,13 +29,13 @@ launch:
    exec: "goal_handler"
    name: "goal_handler_node"
 ###PATHFINDING
-- node:
-   pkg: "tutorial_pkg"
-   exec: "pathfinding_tuto"
-   name: "pathfinding_node"
-   param:
-   - { name: "is_simulation", value: True }
-   - { name: "tunnel_vision_width", value: 0.5 }
+# - node:
+#    pkg: "tutorial_pkg"
+#    exec: "pathfinding_tuto"
+#    name: "pathfinding_node"
+#    param:
+#    - { name: "is_simulation", value: True }
+#    - { name: "tunnel_vision_width", value: 0.5 }
    
 - node:
    pkg: "tutorial_pkg"

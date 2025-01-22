@@ -1,0 +1,42 @@
+launch:
+###Simulateur
+- include:
+   file: "$(find-pkg-share tbot_sim)/launch/challenge-1.launch.py"
+###SLAM
+- include:
+   file: "$(find-pkg-share slam_toolbox)/launch/online_sync_launch.py"
+###RVIZ
+- node:
+   pkg: "rviz2"
+   exec: "rviz2"
+   name: "rviz2"
+   args: "-d $(find-pkg-share grp_pibot23)/rviz/rviz_simulation_2.rviz --ros-args --remap use_sim_time:=True"
+###GOAL NODES
+- node:
+   pkg: "grp_pibot23"
+   exec: "goal_handler"
+   name: "goal_handler_node"
+###PATHFINDING
+- node:
+   pkg: "grp_pibot23"
+   exec: "pathfinding_2"
+   name: "pathfinding_node"
+   param:
+   - { name: "is_simulation", value: True }
+   - { name: "tunnel_vision_width", value: 0.5 }
+###MAP NODES
+- node:
+   pkg: "grp_pibot23"
+   exec: "map_subscriber"
+   name: "map_subscriber"
+   param:
+   - { name: "map_prct_stop", value: 90 }
+   - { name: "map_prct_move_to", value: 40 }
+### rqt and choose configure tool
+- node:
+   pkg: "rqt_gui"
+   exec: "rqt_gui"
+   name: "rqt_gui"
+
+- executable:
+   cmd: gnome-terminal --tab -e 'ros2 topic echo /map_prct_discovered '

@@ -5,10 +5,10 @@ launch:
    pkg: "rviz2"
    exec: "rviz2"
    name: "rviz2"
-   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_move_to.rviz"
+   args: "-d $(find-pkg-share grp_pibot23)/rviz/rviz_simulation_2.rviz"
 
 - node:
-   pkg: "tutorial_pkg"
+   pkg: "grp_pibot23"
    exec: "global_goal_publisher"
    name: "global_goal_publisher_node"
    param:
@@ -17,7 +17,7 @@ launch:
    - { name: "y_global", value: 3.0 }
 
 - node:
-   pkg: "tutorial_pkg"
+   pkg: "grp_pibot23"
    exec: "operator_node"
    name: "operator_control"
    param:

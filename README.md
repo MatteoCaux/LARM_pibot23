@@ -79,8 +79,8 @@ L'objectif du challenge 1 est de parcourir entièrement une zone fermée en évi
 ### Lancement du challenge 1
 
 Pour le challenge 1, vous pouvez : 
-- Lancer le fichier `simulation_v1_launch.yaml` pour la partie simulation : `ros2 launch tutorial_pkg simulation_v1_launch.yaml`
-- Lancer le fichier `tbot_v1_launch.yaml` pour la partie réelle : `ros2 launch tutorial_pkg tbot_v1_launch.yaml`
+- Lancer le fichier `simulation_v1_launch.yaml` pour la partie simulation : `ros2 launch grp_pibot23 simulation_v1_launch.yaml`
+- Lancer le fichier `tbot_v1_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 tbot_v1_launch.yaml`
 
 
 Certains fichier du challenge 1 ont été modifié pour accomplir le challenge 2, ainsi pour retrouver les fichiers du challenge 1, veuillez vous référez au commit `c645cce`. Moreover, each files useful for the challenge 1 as been rename with `_1` to differ them from the challenge 2 files.
@@ -94,3 +94,20 @@ L'objectif du challenge 2 est de reprendre les fonctionnalités du challenge 1 e
 ### Lancement du challenge 2
 
 Pour le challenge 2, vous pouvez :
+
+- Lancer le fichier `simulation_v2_launch.yaml` pour la partie simulation : `ros2 launch grp_pibot23 simulation_v2_launch.yaml`
+- Lancer le fichier `tbot_v2_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 tbot_v2_launch.yaml`
+- Lancer le fichier `operator_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 operator_launch.yaml`
+- - Lancer le fichier ?? pour la partie vision: ..
+
+De nombreux topic sont créer contenant de nombreuse informations utiles:
+
+`/is_pathfinding_on_move_to` stock une variable booléan qui définit si le node pathfinding_2 doit suivre un goal(etat: True) ou être en navigation aléatoire réactive(etat:False)
+
+/moveto/globalgoal correspond a une variable Pose d'un objectif de position dans le repère /map, /moveto/globalgoalMarker est le marqueur correspondant
+/moveto/localgoal correspond a une variable Pose d'un objectif de position dans le repère /base_link du robot,/moveto/localgoalMarker est le marqueur correspondant
+
+/map_prct_discovered correspond à un pourcentage de la map découverte, permet de choisir dans quelle mode de déplacement se trouve pathfinding
+
+/is_manual_mode correspond à une variable booléan utilisé par le node operator qui permet de dire à pathfinding d'arreter ses maneuvres pour être en mode manuel
+/pathfinding_msg correspon à une variable String qui stock les messages de fonctionnement de pathfinding.

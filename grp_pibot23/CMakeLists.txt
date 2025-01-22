@@ -18,6 +18,11 @@ install( PROGRAMS src/vision_robot_1 DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS src/vision_robot_2 DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS src/ghost_marker_publisher DESTINATION lib/${PROJECT_NAME} )
 install( PROGRAMS src/pacman_marker_publisher DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/pathfinding_2 DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/goal_handler DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/global_goal_publisher DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/map_subscriber DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/operator_node DESTINATION lib/${PROJECT_NAME} )
 
 # Install resource files.
 install(DIRECTORY
