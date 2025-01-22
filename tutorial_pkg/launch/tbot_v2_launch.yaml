@@ -1,0 +1,53 @@
+launch:
+
+###SLAM
+- include:
+   file: "$(find-pkg-share slam_toolbox)/launch/online_sync_launch.py"
+
+- node:
+    pkg: "tutorial_pkg"
+    exec: "ghost_marker_publisher"
+    name: "ghost_marker_publisher"
+    param:
+    - { name: "ghost_path", value: $(find-pkg-share grp_pibot23)/stl }
+
+- node:
+    pkg: "tutorial_pkg"
+    exec: "pacman_marker_publisher"
+    name: "pacman_marker_publisher"
+    param:
+    - { name: "pacman_path", value: $(find-pkg-share grp_pibot23)/stl }
+
+- node:
+    pkg: "grp_pibot23"
+    exec: "vision_robot_2"
+    name: "vision_robot"
+    param:
+    - { name: "show_img", value: False }
+
+- node:
+    pkg: "rviz2"
+    exec: "rviz2"
+    name: "rviz2"
+    args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_tbot_2.rviz"
+
+- node:
+   pkg: "tutorial_pkg"
+   exec: "goal_handler"
+   name: "goal_handler_node"
+###PATHFINDING
+- node:
+   pkg: "tutorial_pkg"
+   exec: "pathfinding_tuto"
+   name: "pathfinding_node"
+   param:
+   - { name: "is_simulation", value: False}
+   - { name: "tunnel_vision_width", value: 0.5 }
+   
+- node:
+   pkg: "tutorial_pkg"
+   exec: "map_subscriber"
+   name: "map_subscriber"
+
+- executable:
+   cmd: gnome-terminal --tab -e 'rqt'

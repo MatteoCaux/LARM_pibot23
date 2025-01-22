@@ -54,7 +54,7 @@ class StraightCtrl :
         self._emergency_stop=False
         self.random_turning=False
         self.move_to_command=False
-
+        self.manual_mode=False
         # Init localGoal
         self.localGoal=Pose()
         self.localGoal.position.x=0
@@ -90,7 +90,10 @@ class StraightCtrl :
             Bool, "/is_pathfinding_on_move_to" ,
             self.move_to_sub, 10
         )
-        
+        self._subToLocalGoal= rosNode.create_subscription(
+            Bool, "/is_manual_mode" ,
+            self.manual_mode_sub, 10
+        )
         self._subToLocalGoal= rosNode.create_subscription(
             Pose, "/moveto/localgoal" ,
             self.local_goal_msg, 10
@@ -121,6 +124,9 @@ class StraightCtrl :
 
     def move_to_sub(self,msg):
         self.move_to_command=msg.data
+
+    def manual_mode_sub(self,msg):
+        self.manual_mode=msg.data
 
     def local_goal_msg(self,msg):
         self.localGoal=msg
@@ -160,6 +166,9 @@ class StraightCtrl :
         self.obstacle_left_far=False
         self.obstacle_full_left_far=False
         self.obstacle_full_right_far=False
+        self.goal_straight_line_obstacle=True
+        self.goal_obstacle_right_far=True
+        self.goal_obstacle_left_far=True
         self.totalmindistance=100
         self.maxdistance=0
         self.mindistance=100
@@ -253,9 +262,10 @@ class StraightCtrl :
     #~~~~~~~~~~~~~~~~~~~~~~~#
 
     def global_control(self):
-        if self.move_to_command:
-            self.control_callback_move_to()
-        else:self.control_callback()
+        if not self.manual_mode:
+            if self.move_to_command:
+                self.control_callback_move_to()
+            else:self.control_callback()
     #for random reactive
     def control_callback(self):
         #Reactive reaction to environment
@@ -437,7 +447,7 @@ class StraightCtrl :
             #======================================#
             # Second case : something is too close #
             #======================================#
-            elif self.totalmindistance<0.15:                                               #if an object is too close, the robot can only rotate on itself
+            elif self.totalmindistance<0.2:                                                #if an object is too close, the robot can only rotate on itself
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z  = 0.5

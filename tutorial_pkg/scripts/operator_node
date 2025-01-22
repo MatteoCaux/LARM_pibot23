@@ -1,0 +1,46 @@
+#!/usr/bin/python3
+import rclpy
+from  rclpy.node import Node
+from geometry_msgs.msg import Pose
+from std_msgs.msg import Bool,Int16
+def main():
+    rclpy.init()
+    opNode= operatorNode()
+    # Start infinite loop
+    rclpy.spin(opNode)
+    # Clean everything and switch the light off
+    opNode.destroy_node()
+    rclpy.shutdown()
+
+class operatorNode(Node):
+    def __init__(self):
+        super().__init__('operator_node')
+        self.declare_parameter('activated',False)
+        #Pubs
+        self._pubOPstatus= self.create_publisher(
+            Bool, '/is_manual_mode', 10
+        )
+        # Node Attribute:
+        self.create_timer(0.1, self.publish_goal)
+        #Subs
+        self._subMapPrct= self.create_subscription(
+                Int16, '/map_prct_discovered',
+                self.map_prct_sub, 10
+            )
+
+    def map_prct_sub(self,msg):
+        self.get_logger().info( f'Pourcentage découvert:{msg.data}")
+
+    #Process funcs
+    def publish_goal(self):
+        message=Bool()
+        message.data=self.get_parameter('activated').value
+        self._pubOPstatus.publish(message)
+        
+
+
+
+
+if __name__ == '__main__':
+    main()
+    

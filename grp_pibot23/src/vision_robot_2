@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+
+import pyrealsense2 as rs
+import signal, time, numpy as np
+import sys, cv2, rclpy
+from rclpy.node import Node
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
+from std_msgs.msg import String
+from geometry_msgs.msg import Point32
+
+
+# Realsense Node:
+class Realsense(Node):
+    def __init__(self, fps= 60):
+        super().__init__('realsense')
+        self.declare_parameter('show_img',True)
+        self.show_img=self.get_parameter('show_img').value
+
+        # Configure depth and color streams
+        self.pipeline = rs.pipeline()
+        config = rs.config()
+
+        #counter for the detected ghost
+        self.count = 0
+
+        # Get device product line for setting a supporting resolution
+        pipeline_wrapper = rs.pipeline_wrapper(self.pipeline)
+        pipeline_profile = config.resolve(pipeline_wrapper)
+        
+        config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 60)
+        config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 60)
+        config.enable_stream(rs.stream.infrared, 1, 848, 480, rs.format.y8, 60)
+        config.enable_stream(rs.stream.infrared, 2, 848, 480, rs.format.y8, 60)
+
+        #create the publishers
+        self.image_publisher = self.create_publisher(Image, 'sensor_msgs/cam_image',10)
+        self.depth_publisher = self.create_publisher(Image, 'sensor_msgs/cam_depth',10)
+        self.detection_vert= self.create_publisher(String, 'sensor_msgs/detection',10)
+        self.coord = self.create_publisher(Point32, '/ghost_center',10)
+
+        #useful for conversion of cv2 image to ros2 image
+        self.bridge=CvBridge()
+
+        # Start streaming
+        profile = self.pipeline.start(config)
+
+        # get stream profile adn camera intrinsics
+        color_profile = rs.video_stream_profile(profile.get_stream(rs.stream.color))
+        self.color_intrinsics = color_profile.get_intrinsics()
+
+        #useful to align the color and the depth frames
+        align_to = rs.stream.depth
+        self.align = rs.align(align_to)
+
+        #init of the cropped image
+        self.crop=None
+
+        #set color of the info added to the image
+        self.color_info = (0,0,255)
+
+        self.kernel= np.ones((5,5),np.uint8)
+        #def min and max for green mask
+        self.min_green = np.array([25,100,50])
+        self.max_green = np.array([85,255,255])
+        #min and max for black mask
+        self.min_black = np.array([0,0,0])
+        self.max_black = np.array([255,255,45])
+        #min and max for white mask
+        self.min_white = np.array([80,30,140])
+        self.max_white = np.array([255,90,255])
+
+    def read_imgs(self):
+        # Wait for a coherent tuple of frames: depth, color and accel
+        frames = self.pipeline.wait_for_frames()
+
+        color_frame = frames.first(rs.stream.color)
+
+        #creation de l'image aligne avec la depth
+        aligned_frames =  self.align.process(frames)
+        self.depth_frame = aligned_frames.get_depth_frame()
+        aligned_color_frame = aligned_frames.get_color_frame()
+
+        if not (self.depth_frame and color_frame):
+            pass
+
+        # Convert images to numpy arrays
+        self.depth_image = np.asanyarray(self.depth_frame.get_data())
+        self.color_image = np.asanyarray(color_frame.get_data())
+
+        # Apply colormap on depth image (image must be converted to 8-bit per pixel first)
+        self.depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(self.depth_image, alpha=0.03), cv2.COLORMAP_JET)
+        
+    def publish_imgs(self):
+        msg_image = self.bridge.cv2_to_imgmsg(self.color_image,"bgr8")
+        msg_image.header.stamp = self.get_clock().now().to_msg()
+        msg_image.header.frame_id = "image"
+        self.image_publisher.publish(msg_image)
+
+        msg_depth = self.bridge.cv2_to_imgmsg(self.depth_colormap,"bgr8")
+        msg_depth.header.stamp = msg_image.header.stamp
+        msg_depth.header.frame_id = "depth"
+        self.depth_publisher.publish(msg_depth)        
+
+    def color_filter(self,image,mask_min,mask_max,iswhite=False):
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        mask=cv2.inRange(hsv,mask_min,mask_max)
+        # mask_vert = cv2.GaussianBlur(mask_vert,(11,11),0)
+
+
+        if not iswhite : 
+            mask=cv2.morphologyEx(mask,cv2.MORPH_OPEN,self.kernel)
+
+        return mask
+
+    def pointXYZ(self,pixel):
+        if pixel is None : 
+            return
+        
+        (px,py)=pixel
+
+        depth = self.depth_frame.get_distance(px,py)
+
+        point = rs.rs2_deproject_pixel_to_point(self.color_intrinsics,[px,py],depth)
+        point= [point[0],point[1],point[2]]
+        return point
+
+
+    def ghost(self):
+        #call color_filter to have the green mask
+        self.green_mask=self.color_filter(self.color_image,self.min_green,self.max_green)
+
+        #creation of the contours list 
+        contours_green=cv2.findContours(self.green_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+
+        #counters of the different contours
+        nb_contours_green = 0
+        self.green_square = 0
+        self.black_square=0
+        self.white_eye=0
+
+        if len(contours_green) > 0:
+            for c in contours_green :
+                #get enclosing circle and bounding rectangle
+                ((self.x_green, self.y_green), self.green_radius)=cv2.minEnclosingCircle(c)
+                rect=cv2.boundingRect(c)
+
+                #rect variable
+                bound=rect[:2]
+                width=rect[2]
+                high=rect[3]
+
+                if self.green_radius>20:
+                    nb_contours_green += 1
+
+                    #creation of a cropped image to look after the eyes on a restricted area
+                    # x_max=bound[0]+width+10 if bound[0]+width+10 < self.color_image.shape[1] else bound[0]+width
+                    # y_max=bound[1]+high + 10 if bound[1]+ high+ 10 < self.color_image.shape[0] else bound[1]+high
+                    # y_min = bound[1] - 10 if bound[1] -10 > 0 else bound[1]
+                    # x_min = bound[0] - 10 if bound[0] -10 > 0 else bound[0]
+
+
+                    x_max=bound[0]+width-5 if width > 10 else bound[0]+width
+                    y_max=bound[1]+high -5 if high > 10 else bound[1]+high
+                    y_min = bound[1] +5 if high > 10  else bound[1]
+                    x_min = bound[0] +5 if width > 10 else bound[0]
+
+                    self.crop = self.color_image[y_min:y_max,x_min:x_max]
+
+                    if self.crop is not None : 
+                        #call color_filter for black and white masks
+                        mask_black = self.color_filter(self.crop,self.min_black,self.max_black)
+                        # mask_white = self.color_filter(self.crop,self.min_white,self.max_white,True)
+                        self.internal_contours(mask_black,True)
+                        # self.internal_contours(mask_white,False)
+                        self.eyes_in_green()
+
+
+                    self.green_square += 1
+
+                    cv2.rectangle(self.color_image, bound, (bound[0]+width, bound[1]+high),self.color_info, 2)
+            if nb_contours_green ==0 :
+                self.green_square = 0
+
+    def internal_contours(self, mask, isBlack):
+        contours=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        if len(contours) > 0:
+            for c in contours :
+                ((x, y), radius)=cv2.minEnclosingCircle(c)
+                rect=cv2.boundingRect(c)
+
+                width=rect[2]
+                high=rect[3]
+                ratio = radius/self.green_radius
+
+                if isBlack :
+                    square = width/high
+                    isSquare= square > 0.8 and square < 1.2
+                    isRatio = ratio > 0.1 and ratio < 0.2
+                else : 
+                    isSquare = True
+                    isRatio = ratio < 0.35 and ratio > 0.25
+
+                if isRatio and isSquare  :
+                    cv2.circle(self.crop, (int(x), int(y)), int(radius), self.color_info, 2)
+                    if isBlack : 
+                        self.black_square+=1
+                    else : 
+                        self.white_eye +=1
+
+    def ghost_detection(self):
+        if self.white_eye >=1 and self.black_square >= 1 and self.green_square >=1 :
+            self.count += 1
+            msg = String()
+            msg.data = "Ghost detected, it is the number : " + str(self.count)
+            self.detection_vert.publish(msg)
+            coord = self.pointXYZ((int(self.x_green),int(self.y_green)))
+            msg = Point32()
+            msg.x = coord[0]
+            msg.y = coord[1]
+            msg.z = coord[2]
+            self.coord.publish(msg)
+
+    def eyes_in_green(self):
+        green_crop = self.color_filter(self.crop,self.min_green,self.max_green,False)
+        self.not_green = cv2.bitwise_not(green_crop)
+        self.not_green = cv2.morphologyEx(self.not_green, cv2.MORPH_OPEN, self.kernel)
+        contours=cv2.findContours(self.not_green, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        if len(contours) > 0:
+            for c in contours :
+                ((x, y), radius)=cv2.minEnclosingCircle(c)
+
+                ratio = radius/self.green_radius
+                isRatio = ratio < 0.35 and ratio > 0.25
+                if isRatio :
+                    cv2.circle(self.crop, (int(x), int(y)), int(radius), self.color_info, 2)
+                    self.white_eye +=1    
+
+        #print(green_crop)
+
+    def show(self):
+        # Show images
+        #images = np.hstack((self.color_image, self.depth_colormap))#,self.infra_colormap_1,self.infra_colormap_2))
+        #green = np.hstack((self.res2_vert,self.closing))
+
+        # Show images
+        cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
+        cv2.imshow('RealSense', self.color_image)
+        if self.crop is not None : 
+            cv2.imshow('crop',self.crop)
+            cv2.imshow("not_green",self.not_green)
+        cv2.waitKey(1)
+
+
+# Node processes:
+def main():
+    rclpy.init(args=sys.argv)
+    rsNode= Realsense()
+    while isOk:
+        rsNode.read_imgs()
+        rsNode.publish_imgs()
+        rsNode.ghost()
+        rsNode.ghost_detection()
+        if rsNode.show_img : 
+            rsNode.show()
+        rclpy.spin_once(rsNode, timeout_sec=0.001)
+    # Stop streaming
+    print("Ending...")
+    rsNode.pipeline.stop()
+    # Clean end
+    rsNode.destroy_node()
+    rclpy.shutdown()
+
+if __name__=="__main__":
+    # Capture ctrl-c event
+    isOk= True
+    def signalInteruption(signum, frame):
+        global isOk
+        print( "\nCtrl-c pressed" )
+        isOk= False
+
+    signal.signal(signal.SIGINT, signalInteruption)
+
+    main()

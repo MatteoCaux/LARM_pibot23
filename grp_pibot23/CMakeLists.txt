@@ -13,8 +13,11 @@ find_package(ament_cmake REQUIRED)
 
 #Python scripts
 install( PROGRAMS lib_import/scan_echo.py DESTINATION lib/${PROJECT_NAME} )
-install( PROGRAMS src/pathfinding DESTINATION lib/${PROJECT_NAME} )
-install( PROGRAMS src/vision_robot DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/pathfinding_1 DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/vision_robot_1 DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/vision_robot_2 DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/ghost_marker_publisher DESTINATION lib/${PROJECT_NAME} )
+install( PROGRAMS src/pacman_marker_publisher DESTINATION lib/${PROJECT_NAME} )
 
 # Install resource files.
 install(DIRECTORY
