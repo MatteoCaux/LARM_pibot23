@@ -9,18 +9,18 @@ launch:
     exec: "ghost_marker_publisher"
     name: "ghost_marker_publisher"
     param:
-    - { name: "ghost_path", value: $(find-pkg-share grp_pibot23)/stl }
+    - { name: "ghost_path", value: $(find-pkg-share tutorial_pkg)/stl }
 
 - node:
     pkg: "tutorial_pkg"
     exec: "pacman_marker_publisher"
     name: "pacman_marker_publisher"
     param:
-    - { name: "pacman_path", value: $(find-pkg-share grp_pibot23)/stl }
+    - { name: "pacman_path", value: $(find-pkg-share tutorial_pkg)/stl }
 
 - node:
-    pkg: "grp_pibot23"
-    exec: "vision_robot_2"
+    pkg: "tuto_vision"
+    exec: "vision_robot"
     name: "vision_robot"
     param:
     - { name: "show_img", value: False }
