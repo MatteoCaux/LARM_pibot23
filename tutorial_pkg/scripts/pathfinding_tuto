@@ -54,7 +54,7 @@ class StraightCtrl :
         self._emergency_stop=False
         self.random_turning=False
         self.move_to_command=False
-        self.is_operator_mode=False
+        self.manual_mode=False
         #init localGoal
         self.localGoal=Pose()
         self.localGoal.position.x=0
@@ -91,8 +91,8 @@ class StraightCtrl :
             self.move_to_sub, 10
         )
         self._subToLocalGoal= rosNode.create_subscription(
-            Bool, "/is_operator_mode" ,
-            self.op_mode_sub, 10
+            Bool, "/is_manual_mode" ,
+            self.manual_mode_sub, 10
         )
         self._subToLocalGoal= rosNode.create_subscription(
             Pose, "/moveto/localgoal" ,
@@ -122,7 +122,7 @@ class StraightCtrl :
         self.move_to_command=msg.data
 
     def op_mode_sub(self,msg):
-        self.is_operator_mode=msg.data
+        self.manual_mode=msg.data
 
     def local_goal_msg(self,msg):
         self.localGoal=msg
@@ -251,7 +251,7 @@ class StraightCtrl :
     ######################
 
     def global_control(self):
-        if not self.is_operator_mode:
+        if not self.manual_mode:
             if self.move_to_command:
                 self.control_callback_move_to()
             else:self.control_callback()
