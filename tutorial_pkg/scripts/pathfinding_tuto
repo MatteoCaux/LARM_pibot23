@@ -63,7 +63,7 @@ class StraightCtrl :
         self.distance_goal=sqrt(self.localGoal.position.y**2+self.localGoal.position.x**2)
 
         # Declare parameter to read
-        rosNode.declare_parameter('is_simulation',True)
+        rosNode.declare_parameter('is_simulation',False)
         rosNode.declare_parameter('tunnel_vision_width',0.50)
         rosNode.declare_parameter('time_step_random_turn',20)
         # Read the parameters
@@ -73,8 +73,8 @@ class StraightCtrl :
 
         # Simulation check
         if not self.is_simulation:
-            global WheelDropEvent, ButtonEvent
-            from kobuki_ros_interfaces.msg import WheelDropEvent, ButtonEvent
+            global WheelDropEvent, ButtonEvent,Led
+            from kobuki_ros_interfaces.msg import WheelDropEvent, ButtonEvent,Led
             cmd_robot_topic='/multi/cmd_nav'
             scan_robot_topic='/scan'
         else:
@@ -104,7 +104,11 @@ class StraightCtrl :
                 WheelDropEvent, '/events/wheel_drop',
                 self.wheel_drop, 10
             )
-        self._subToScan= rosNode.create_subscription(    # In all cases
+            self._pubLed=rosNode.create_publisher(Led,'commands/led1',10)
+            led=Led()
+            led.value=0
+            self._pubLed.publish(led)
+        self._subToScan= rosNode.create_subscription(                                                 #in all cases
             LaserScan,scan_robot_topic ,
             self.scan_callback, 10
         )
@@ -139,19 +143,25 @@ class StraightCtrl :
     def scan_callback(self, scanMsg ):
         self.process_scan_data(scanMsg)
     
-    # Stopping the robot when it is lifted
     def wheel_drop(self,msg):
         if msg.state==1:
+            led=Led()
+            led.value=3
             velocity=Twist()
             velocity.linear.x = 0.0 #m/s
             velocity.angular.z = 0.0 #rad/s
             self._pubVelocity.publish(velocity)
+            self._pubLed.publish(led)
             self._emergency_stop=True
 
     # When a button is pushed, the emergency stop status is removed
     def button(self,msg):
         if msg.state == 1:
             self._emergency_stop=False
+            led=Led()
+            led.value=0
+
+            self._pubLed.publish(led)
 
 
     #================================================================#
@@ -480,7 +490,9 @@ class StraightCtrl :
                     message+="state1:close obstacle right\n"
 
                     #We adapt our speed to the current one
-                    velocity.linear.x=self.smooth_x_speed_target(0.0,0.025)
+
+                    velocity.linear.x=self.smooth_x_speed_target(0.16,0.02)
+
 
                     #is there something far on the left ?    
                     if not self.obstacle_full_left_far:                                      #if not the robot turn to the left
@@ -493,7 +505,9 @@ class StraightCtrl :
                     message+="state2:close obstacle left\n"
 
                     #We adapt our speed to the current one              
-                    velocity.linear.x=self.smooth_x_speed_target(0.0,0.02)
+
+                    velocity.linear.x=self.smooth_x_speed_target(0.16,0.02)
+>>>>>>> a295a664775b9e3316f3a8519db2bacc607fa39e
 
                     #is there something far on the right ?     
                     if not self.obstacle_full_right_far:                                     #if not the robot turn to the right

@@ -29,7 +29,7 @@ launch:
     pkg: "rviz2"
     exec: "rviz2"
     name: "rviz2"
-    args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_tbot_2.rviz"
+    args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_tbot_v2.rviz"
 
 - node:
    pkg: "tutorial_pkg"

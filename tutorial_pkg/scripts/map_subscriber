@@ -73,7 +73,7 @@ class MapSubscriber(Node):
             print("publie un nouveau goal")
             goal_options=self.get_pixel_touching_border()
             #contour=self.contours(goal_options)
-            goal=self.take_goal_from_list(goal_options)
+            goal=self.take_goal_from_list(goal_options)#filter_the_map(
             goal_x=self.origin.position.x+goal[1]*self.res
             goal_y=self.origin.position.y+goal[0]*self.res
             goal_pose=Pose()
@@ -104,9 +104,30 @@ class MapSubscriber(Node):
                     if (self.check_around_pixel(i,j,0)):
                         res_array.append([i,j])
         return(res_array)
-                    
+    
+    def filter_the_map(self,map_array):
+        map_array_filtered=[]
+        for p in map_array:
+            if self.filter(p[0],p[1]):
+                map_array_filtered.append(p)
+        return(map_array_filtered)
+
+
     def find_pixel(self,i,j):
        return(self.data[i*self.width+j])
+
+    def filter(self,i,j):
+        res=0
+        if not i<=0:
+            if self.data[(i-1)*self.width+j]==color:res+=1
+        if not i>=self.height-1:
+            if self.data[(i+1)*self.width+j]==color:res+=1
+        if not j<=0: 
+            if self.data[i*self.width+j-1]==color:res+=1
+        if not j>=self.width-1:
+            if self.data[i*self.width+j+1]==color:res+=1
+        if res<2:return(False)
+        else:return(True)
 
     def check_around_pixel(self,i,j,color):
         #check if pixels around (in a cross) the targeted pixel are white
