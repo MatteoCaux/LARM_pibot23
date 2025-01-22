@@ -20,6 +20,9 @@ Ce répertoire est un package ROS2 pour le contrôle d'un robot Kobuki.
 - [Challenge 1](#challenge-1)
   - [Objectifs](#objectifs)
   - [Lancement du challenge 1](#lancement-du-challenge-1)
+- [Challenge 2](#challenge-2)
+  - [Objectifs](#objectifs-1)
+  - [Lancement du challenge 2](#lancement-du-challenge-2)
 
 
 ## Installation
@@ -78,6 +81,9 @@ L'objectif du challenge 1 est de parcourir entièrement une zone fermée en évi
 Pour le challenge 1, vous pouvez : 
 - Lancer le fichier `simulation_v1_launch.yaml` pour la partie simulation : `ros2 launch tutorial_pkg simulation_v1_launch.yaml`
 - Lancer le fichier `tbot_v1_launch.yaml` pour la partie réelle : `ros2 launch tutorial_pkg tbot_v1_launch.yaml`
+
+
+Certains fichier du challenge 1 ont été modifié pour accomplir le challenge 2, ainsi pour retrouver les fichiers du challenge 1, veuillez vous référez au commit `c645cce`. Moreover, each files useful for the challenge 1 as been rename with `_1` to differ them from the challenge 2 files.
 
 ## Challenge 2
 

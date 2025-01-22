@@ -35,7 +35,7 @@ class StraightCtrl :
         # Initialization                                           
         # Get logger from the node:
         self._logger = rosNode.get_logger()
-        #scan states
+        # Scan states
         self.obstacle_right_close=False
         self.obstacle_left_close=False
         self.obstacle_right_far=False
@@ -44,34 +44,34 @@ class StraightCtrl :
         self.obstacle_full_right_far=False
         self.no_scan=True
 
-        #init commandes 
+        # Init commandes 
         self.previous_z=0.5
         self.previous_x=0.15
-        #init topics
+        # Init topics
         self.cmd_robot_topic=''
         self.scan_robot_topic=''
-        #init function states variables
+        # Init function states variables
         self._emergency_stop=False
         self.random_turning=False
         self.move_to_command=False
         self.manual_mode=False
-        #init localGoal
+        # Init localGoal
         self.localGoal=Pose()
         self.localGoal.position.x=0
         self.localGoal.position.y=0
         self.theta_goal=atan2(self.localGoal.position.y,self.localGoal.position.x)
         self.distance_goal=sqrt(self.localGoal.position.y**2+self.localGoal.position.x**2)
 
-        #declare parameter to read
+        # Declare parameter to read
         rosNode.declare_parameter('is_simulation',True)
         rosNode.declare_parameter('tunnel_vision_width',0.50)
         rosNode.declare_parameter('time_step_random_turn',20)
-        #read the parameters
+        # Read the parameters
         self.is_simulation=rosNode.get_parameter('is_simulation').value
         self.tunnel_vision_width=rosNode.get_parameter('tunnel_vision_width').value
         self.time_step_random_turn=rosNode.get_parameter('time_step_random_turn').value
 
-        #simulation check
+        # Simulation check
         if not self.is_simulation:
             global WheelDropEvent, ButtonEvent
             from kobuki_ros_interfaces.msg import WheelDropEvent, ButtonEvent
@@ -98,13 +98,13 @@ class StraightCtrl :
             Pose, "/moveto/localgoal" ,
             self.local_goal_msg, 10
         )
-        if not self.is_simulation:                                                                         #if the robot is tested in real life
+        if not self.is_simulation:    # If the robot is tested in real life
             self.sub_bouton=rosNode.create_subscription(ButtonEvent,'events/button',self.button,10)
             self._subToWheelDrop= rosNode.create_subscription(
                 WheelDropEvent, '/events/wheel_drop',
                 self.wheel_drop, 10
             )
-        self._subToScan= rosNode.create_subscription(                                                 #in all cases
+        self._subToScan= rosNode.create_subscription(    # In all cases
             LaserScan,scan_robot_topic ,
             self.scan_callback, 10
         )
@@ -117,11 +117,15 @@ class StraightCtrl :
             self.time_step_random_turn, self.random_turn
         )
 
-    #Subs functions
+
+    ##################
+    # Subs functions #
+    ##################
+
     def move_to_sub(self,msg):
         self.move_to_command=msg.data
 
-    def op_mode_sub(self,msg):
+    def manual_mode_sub(self,msg):
         self.manual_mode=msg.data
 
     def local_goal_msg(self,msg):
@@ -133,13 +137,10 @@ class StraightCtrl :
         print('theta_goal:'+str(self.theta_goal))
 
     def scan_callback(self, scanMsg ):
-        #self._logger.info( '> get scan' )
         self.process_scan_data(scanMsg)
-        #urgent stop
     
+    # Stopping the robot when it is lifted
     def wheel_drop(self,msg):
-        # if msg.state==0:
-        #     self._emergency_stop=False
         if msg.state==1:
             velocity=Twist()
             velocity.linear.x = 0.0 #m/s
@@ -147,13 +148,16 @@ class StraightCtrl :
             self._pubVelocity.publish(velocity)
             self._emergency_stop=True
 
+    # When a button is pushed, the emergency stop status is removed
     def button(self,msg):
         if msg.state == 1:
             self._emergency_stop=False
 
+
     #================================================================#
     # Definition of the position of the obstacle from the LIDAR data #
     #================================================================#
+
     def process_scan_data(self,scanMsg):
         #Initialization
         self.obstacle_right_close=False
@@ -170,16 +174,18 @@ class StraightCtrl :
         self.mindistance=100
         self.full_right_min=100
         self.full_left_min=100
+
         # The robot looks in a 40cm tunnel in front of him
         scan_tunnel_d=self.tunnel_vision_width
 
+        # If there is a scan
         if scanMsg is not None : 
             self.no_scan=False
             angle= scanMsg.angle_min
             if self.move_to_command: self.find_obstacles_to_goal(scanMsg) #if move to , add some scanning
-            for aDistance in scanMsg.ranges :
 
-                #for each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)    
+            for aDistance in scanMsg.ranges :
+                # For each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)    
                 if 0.1 < aDistance:
                     if aDistance < 1.1 :
                         if self.totalmindistance>aDistance:self.totalmindistance=aDistance
@@ -200,7 +206,7 @@ class StraightCtrl :
                                     if self.maxdistance<aDistance: self.maxdistance=aDistance
                                     if self.mindistance>aDistance: self.mindistance=aDistance
 
-                    #we also look if there are obstacles at 90 degres on each side of the robot
+                    # We also look if there are obstacles at 90 degres on each side of the robot
                     if aDistance<3:
                         if angle<-1.39 and angle >-1.55:
                             self.obstacle_full_right_far=True
@@ -209,10 +215,11 @@ class StraightCtrl :
                             self.obstacle_full_left_far=True
                             if self.full_left_min>aDistance:self.full_left_min=aDistance
                 angle+= scanMsg.angle_increment
-        else : 
+        else :    # If no scan
             self.no_scan=True
             print("Scan not found, exit")
 
+    # Looking for the obstacles between the robot and the goal
     def find_obstacles_to_goal(self,scanMsg):
         self.goal_straight_line_obstacle=False
         self.goal_obstacle_right_far=False
@@ -246,9 +253,13 @@ class StraightCtrl :
             self.goal_straight_line_obstacle=True
         else: print("goal is in range")
 
-    ######################
-    # robot control #
-    ######################
+    #################
+    # Robot control #
+    #################
+
+    #~~~~~~~~~~~~~~~~~~~~~~~#
+    # If no goal is defined #
+    #~~~~~~~~~~~~~~~~~~~~~~~#
 
     def global_control(self):
         if not self.manual_mode:
@@ -258,17 +269,17 @@ class StraightCtrl :
     #for random reactive
     def control_callback(self):
         #Reactive reaction to environment
-        if not self.random_turning:                                                        #if the robot isn't in a random turn
+        if not self.random_turning:                                                         #if the robot isn't in a random turn
             #self._logger.info( '< define control' )
             velocity=Twist()
             velocity.angular.z = self.previous_z #rad/s
-            base_angular_speed=0.7                                                         #rotation speed
+            base_angular_speed=0.7                                                          #rotation speed
             message=""
 
             #=================================#
             # First case : nothing is scanned #
             #=================================#
-            if self.no_scan or self._emergency_stop:                                       #if nothing is scanned, the robot stop
+            if self.no_scan or self._emergency_stop:                                        #if nothing is scanned, the robot stop
                 print("no scan/emergency stop")
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z = 0.0 #rad/s
@@ -392,6 +403,7 @@ class StraightCtrl :
             #previous values
             self.previous_z=velocity.angular.z
             self.previous_x=velocity.linear.x
+
             #publishing
             self._pubVelocity.publish(velocity)
 
@@ -404,7 +416,12 @@ class StraightCtrl :
             print("#----------------#")
             print(message)
             print("|----------------|")
-    #for move to
+
+
+    #~~~~~~~~~~~~~~~~~~~~~~#
+    # If a goal is defined #
+    #~~~~~~~~~~~~~~~~~~~~~~#
+
     def control_callback_move_to(self):
         #Reactive reaction to environment
         if not self.random_turning:                                                        #if the robot isn't in a random turn
@@ -425,12 +442,12 @@ class StraightCtrl :
             elif self.distance_goal<0.1:
                 print('goal atteint')
                 velocity.linear.x = 0.0 #m/s
-                velocity.angular.z = 0.0 #rad/s                                                #the robot stop              
+                velocity.angular.z = 0.0 #rad/s                                            #the robot stop              
 
             #======================================#
             # Second case : something is too close #
             #======================================#
-            elif self.totalmindistance<0.15:                                                #if an object is too close, the robot can only rotate on itself
+            elif self.totalmindistance<0.2:                                                #if an object is too close, the robot can only rotate on itself
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z  = 0.5
@@ -438,7 +455,7 @@ class StraightCtrl :
             #=================================#
             # Third case : something is close #
             #=================================#
-            elif self.obstacle_right_close or self.obstacle_left_close:                     #something is close
+            elif self.obstacle_right_close or self.obstacle_left_close:                    #something is close
                 #We look at the situation (where are the obstacles) and we choose where to move
 
                 # 1) something is close both on the right and on the left
@@ -484,7 +501,7 @@ class StraightCtrl :
                     if velocity.angular.z==0:
                         velocity.angular.z=smooth_z_speed_target(-base_angular_speed,0.1)
 
-                if velocity.linear.x<0.0:velocity.linear.x=0.0                               #avoiding errors
+                if velocity.linear.x<0.0:velocity.linear.x=0.0                             #avoiding errors
 
             #================================#
             # Fourth case : something is far #
@@ -537,7 +554,7 @@ class StraightCtrl :
             #===============================================#
             # Fifth case : the goal can be reached directly #
             #===============================================#
-            elif not (self.goal_straight_line_obstacle or self.goal_obstacle_right_far or self.goal_obstacle_left_far):#si rien vers le goal
+            elif not (self.goal_straight_line_obstacle or self.goal_obstacle_right_far or self.goal_obstacle_left_far): #si rien vers le goal
                 message+="state7 : le goal est libre d'accès\n"
                 message+="capteur vers goal"+str(self.goal_obstacle_left_far)+str(self.goal_straight_line_obstacle)+str(self.goal_obstacle_right_far)+"\n"
                 if abs(self.theta_goal)>0.08726: #si pas bien oriente
@@ -549,17 +566,18 @@ class StraightCtrl :
                     message+="le goal est en face, going forward\n"
     
             #===================================#
-            # Fifth case : no obstacle in front #
+            # Sixth case : no obstacle in front #
             #===================================#
             else:
                 #the robot goes forward
                 velocity.angular.z = self.orientate_to_goal()#rad/s
                 velocity.linear.x=self.smooth_x_speed_target(0.6,0.012)
                 message+="state 0:no obstacles\n"
-                #previous values
-
+            
+            #previous values
             self.previous_z=velocity.angular.z
             self.previous_x=velocity.linear.x
+
             #publishing
             self._pubVelocity.publish(velocity)
 
@@ -600,8 +618,8 @@ class StraightCtrl :
         if not self._emergency_stop and not self.move_to_command :
             velocity=Twist()
             self.random_turning=True
-            direction=rd.randint(1,2)         #définition de si le virage se fera à gauche ou à droite
-            angle_value=rd.randint(30,180)    #angle du virage (entre 30 et 180)
+            direction=rd.randint(1,2)                                                      #right or left ?
+            angle_value=rd.randint(30,180)                                                 #angle ? (betwenn 30 and 180°)
             if direction==1:angle=-angle_value
             if direction==2:angle=angle_value
             while self.previous_x>0.0 and not self._emergency_stop:
@@ -629,18 +647,21 @@ class StraightCtrl :
         while counter < duration and not self._emergency_stop: 
             velocity.angular.z = rotation_speed
             counter = time()-start
+
             #Previous values
             self.previous_z=velocity.angular.z
+            
             #Publish
             self._pubVelocity.publish(velocity)
-
-    #goal consign function helper
+    
+    # Speed when going to the goal
     def speed_to_goal(self,distance):
         speed=distance*0.7
         if speed>0.7:speed=0.7
         if distance <0.05:speed=0
         return(speed)
 
+    # Orientation to the goal
     def orientate_to_goal(self):
         precision=0.08726
         if self.theta_goal>precision*3:

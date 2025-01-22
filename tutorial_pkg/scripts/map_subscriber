@@ -56,10 +56,10 @@ class MapSubscriber(Node):
         prct_message=Int16()
         prct_message.data=int(prct)
         self._pubMapPrct.publish(prct_message)
-        if prct>95:
+        if prct>50:
             print("map completed")
             self.is_publishing_goal_pose=False
-        elif prct>40:
+        elif prct>30:
             message.data=True
             self._pubPathfindingState.publish(message)
             self.is_publishing_goal_pose=True

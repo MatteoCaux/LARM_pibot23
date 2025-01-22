@@ -30,3 +30,24 @@ launch:
     exec: "rviz2"
     name: "rviz2"
     args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_tbot_2.rviz"
+
+- node:
+   pkg: "tutorial_pkg"
+   exec: "goal_handler"
+   name: "goal_handler_node"
+###PATHFINDING
+- node:
+   pkg: "tutorial_pkg"
+   exec: "pathfinding_tuto"
+   name: "pathfinding_node"
+   param:
+   - { name: "is_simulation", value: False}
+   - { name: "tunnel_vision_width", value: 0.5 }
+   
+- node:
+   pkg: "tutorial_pkg"
+   exec: "map_subscriber"
+   name: "map_subscriber"
+
+- executable:
+   cmd: gnome-terminal --tab -e 'rqt'
