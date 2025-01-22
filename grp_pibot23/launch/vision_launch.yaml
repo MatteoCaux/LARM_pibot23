@@ -1,0 +1,8 @@
+launch:
+#launch the vision_robot node with the display by imshow
+- node:
+    pkg: "grp_pibot23"
+    exec: "vision_robot_2"
+    name: "vision_robot"
+    param:
+    - { name: "show_img", value: True } 
