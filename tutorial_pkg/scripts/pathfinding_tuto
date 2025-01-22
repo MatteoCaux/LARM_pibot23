@@ -121,7 +121,7 @@ class StraightCtrl :
     def move_to_sub(self,msg):
         self.move_to_command=msg.data
 
-    def op_mode_sub(self,msg):
+    def manual_mode_sub(self,msg):
         self.manual_mode=msg.data
 
     def local_goal_msg(self,msg):
@@ -430,7 +430,7 @@ class StraightCtrl :
             #======================================#
             # Second case : something is too close #
             #======================================#
-            elif self.totalmindistance<0.15:                                                #if an object is too close, the robot can only rotate on itself
+            elif self.totalmindistance<0.2:                                                #if an object is too close, the robot can only rotate on itself
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z  = 0.5
