@@ -26,18 +26,18 @@ class Pacman_Marker(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-        self.local_frame = 'base_link'
+        self.local_frame = 'base_footprint'
 
     def publish_markers(self):
         pose=Pose()
         # adjust pose
-        pose.position.y -= 1.5 
-        pose.position.x -= 0.5 
+        # pose.position.y -= 1.5 
+        # pose.position.x -= 0.5 
         currentTime= rclpy.time.Time()
         # Get Transformation
         try:
             stampedTransform= self.tf_buffer.lookup_transform(
-                        'odom', #'map'
+                        'map',#'odom',
                         self.local_frame,
                         currentTime)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as tex: #:TransformException
@@ -47,7 +47,7 @@ class Pacman_Marker(Node):
         pacman_pose = tf2_geometry_msgs.do_transform_pose( pose, stampedTransform )
                 
         PacmanMarker=Marker()
-        PacmanMarker.header.frame_id='odom'#'map'
+        PacmanMarker.header.frame_id='map'#'odom'
         PacmanMarker.header.stamp=self.get_clock().now().to_msg()
         PacmanMarker.ns='PacmanMarkers'
         PacmanMarker.id=0
@@ -55,17 +55,17 @@ class Pacman_Marker(Node):
         # Set the position of each marker
         PacmanMarker.pose=pacman_pose
 
-        if (self.pacman_path is not None) and os.path.isfile(self.pacman_path+"/Ghost-8x3.stl"):
+        if (self.pacman_path is not None) and os.path.isfile(self.pacman_path+"/pacman.stl"):
             PacmanMarker.type=10
             PacmanMarker.action = 0
-            PacmanMarker.mesh_resource = "file:"+self.pacman_path+"/Pacman-6x3.stl"
+            PacmanMarker.mesh_resource = "file:"+self.pacman_path+"/pacman.stl"
         else : 
             PacmanMarker.type=PacmanMarker.CUBE
             PacmanMarker.action = PacmanMarker.ADD
         
-        PacmanMarker.scale.x = 0.01
-        PacmanMarker.scale.y = 0.01
-        PacmanMarker.scale.z = 0.01
+        PacmanMarker.scale.x = 0.007
+        PacmanMarker.scale.y = 0.007
+        PacmanMarker.scale.z = 0.007
         PacmanMarker.color.a = 1.0
         PacmanMarker.color.r = 1.0
         PacmanMarker.color.g = 1.0

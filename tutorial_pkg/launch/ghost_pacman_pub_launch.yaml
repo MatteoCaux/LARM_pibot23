@@ -1,5 +1,9 @@
 launch:
 
+###SLAM
+- include:
+   file: "$(find-pkg-share slam_toolbox)/launch/online_sync_launch.py"
+
 - node:
     pkg: "tutorial_pkg"
     exec: "ghost_marker_publisher"
@@ -13,3 +17,16 @@ launch:
     name: "pacman_marker_publisher"
     param:
     - { name: "pacman_path", value: $(find-pkg-share tutorial_pkg)/stl }
+
+- node:
+    pkg: "tuto_vision"
+    exec: "vision_robot"
+    name: "vision_robot"
+    param:
+    - { name: "show_img", value: False }
+
+- node:
+    pkg: "rviz2"
+    exec: "rviz2"
+    name: "rviz2"
+    args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_marker.rviz"

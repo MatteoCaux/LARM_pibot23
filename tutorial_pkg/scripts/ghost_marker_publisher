@@ -44,6 +44,7 @@ class Ghost_Marker(Node):
         self.list_ghost = []
         self.new=False
 
+        self.id_marker=0
     
     def Ghost_listener(self,msg):
         self.centre_ghost = msg
@@ -53,24 +54,33 @@ class Ghost_Marker(Node):
 
     def publish_markers(self):
         if self.centre_ghost is not None :
+            # print("ghost")
             ghost_pose = self.cam2lidar(self.centre_ghost)
             ghost_pose=self.lidar2map(ghost_pose)
-            self.distance(ghost_pose)
 
-            if self.new :  
+            if ghost_pose is not None : 
+                self.distance(ghost_pose)
+                self.centre_ghost = None
+            else : 
+                self.new = False
+
+            if self.new :
+                # print("new ghost")
+                self.new = False
+                # for ghost in self.list_ghost :  
                 GhostMarker=Marker()
-                GhostMarker.header.frame_id='odom'#'map'
+                GhostMarker.header.frame_id='map'
                 GhostMarker.header.stamp=self.get_clock().now().to_msg()
                 GhostMarker.ns='GhostsMarkers'
-                GhostMarker.id=0
+                GhostMarker.id=self.id_marker
 
                 # Set the position of each marker
                 GhostMarker.pose = ghost_pose
 
-                if (self.ghost_path is not None) and os.path.isfile(self.ghost_path+"/Ghost-8x3.stl"):
+                if (self.ghost_path is not None) and os.path.isfile(self.ghost_path+"/ghost.stl"):
                     GhostMarker.type=10
                     GhostMarker.action = 0
-                    GhostMarker.mesh_resource = "file:"+self.ghost_path+"/Ghost-8x3.stl"
+                    GhostMarker.mesh_resource = "file:"+self.ghost_path+"/ghost.stl"
                 else : 
                     GhostMarker.type=GhostMarker.CUBE
                     GhostMarker.action = GhostMarker.ADD
@@ -128,34 +138,38 @@ class Ghost_Marker(Node):
 
         # print(point2)
         # print(pose_ghost)
-
         return pose_ghost
+
     
     def lidar2map(self,pose):
         currentTime= rclpy.time.Time()
         # Get Transformation
         try:
             stampedTransform= self.tf_buffer.lookup_transform(
-                        'odom', #'map'
-                        'laser',# self.local_frame,
+                        'map',
+                        self.local_frame ,# 'laser',
                         currentTime)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as tex: #:TransformException
             self.get_logger().info( f'Could not transform the Point into {self.local_frame}: {tex}')
             return
         # Compute ghost pose from laser_link to map 
         map_ghost = tf2_geometry_msgs.do_transform_pose( pose, stampedTransform )
-        return map_ghost
+        if map_ghost.position.z < 0.2 :
+            return map_ghost
+        else : 
+            return None
 
 
     def distance(self,new_ghost):
         for pose in self.list_ghost:
             d = np.sqrt((pose.position.x - new_ghost.position.x)**2 +(pose.position.y - new_ghost.position.y)**2 + (pose.position.z - new_ghost.position.z)**2 )
             # print(d)
-            if d < 0.05 : 
+            if d < 0.5 : 
                 self.new = False
                 return
         self.list_ghost.append(new_ghost)
         self.new=True
+        self.id_marker+=1
         # print(self.list_ghost)
 
 

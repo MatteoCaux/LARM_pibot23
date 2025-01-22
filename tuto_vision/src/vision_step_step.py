@@ -24,7 +24,7 @@ def filtre_vert(image_couleur):
     hsv = cv2.cvtColor(image_couleur, cv2.COLOR_BGR2HSV)
     
     #min et max du vert
-    min_vert = np.array([50,100,50])
+    min_vert = np.array([40,100,50])
     max_vert = np.array([85,255,255])
 
     mask_vert=cv2.inRange(hsv,min_vert,max_vert)
@@ -50,11 +50,11 @@ def contours(image_couleur,image_neutre,mask,vert,depth_frame):
             coin=rect[:2]
             largeur=rect[2]
             hauteur=rect[3]
-            if rayon>40:
-                x_max=coin[0]+largeur+30 if coin[0]+largeur+30 < image_couleur.shape[1] else coin[0]+largeur
-                y_max=coin[1]+hauteur + 30 if coin[1]+ + 30 < image_couleur.shape[0] else coin[1]+hauteur
-                y_min = coin[1] - 30 if coin[1] -30 > 0 else coin[1]
-                x_min = coin[0] - 30 if coin[0] -30 > 0 else coin[0]
+            if rayon>20:
+                x_max=coin[0]+largeur+10 if coin[0]+largeur+10 < image_couleur.shape[1] else coin[0]+largeur
+                y_max=coin[1]+hauteur + 10 if coin[1]+ + 10 < image_couleur.shape[0] else coin[1]+hauteur
+                y_min = coin[1] - 10 if coin[1] -10 > 0 else coin[1]
+                x_min = coin[0] - 10 if coin[0] -10 > 0 else coin[0]
                 crop = image_neutre[y_min:y_max,x_min:x_max]
 
                 cv2.circle(vert, (int(x), int(y)), int(rayon), color_info, 2)
@@ -141,7 +141,7 @@ def voir_carre_noir(image_crop,image_couleur, rayon):
     
     #min et max du noir
     min_noir = np.array([0,0,0])
-    max_noir = np.array([255,255,30])
+    max_noir = np.array([255,255,60])
 
     mask_noir=cv2.inRange(hsv,min_noir,max_noir)
 
@@ -173,14 +173,14 @@ def voir_yeux_blanc(image_crop,image_couleur,rayon_vert):
     hsv = cv2.cvtColor(image_crop, cv2.COLOR_BGR2HSV)
     
     #min et max du vert
-    min_blanc = np.array([80,0,140])
-    max_blanc = np.array([255,40,255])
+    min_blanc = np.array([80,30,140])
+    max_blanc = np.array([255,110,255])
 
     mask_blanc=cv2.inRange(hsv,min_blanc,max_blanc)
 
     kernel= np.ones((5,5),np.uint8)
 
-    mask_blanc=cv2.morphologyEx(mask_blanc,cv2.MORPH_OPEN,kernel)
+    # mask_blanc=cv2.morphologyEx(mask_blanc,cv2.MORPH_OPEN,kernel)
 
     # res_blanc = cv2.cvtColor(cv2.bitwise_and(hsv,hsv,mask=mask_blanc),cv2.COLOR_HSV2BGR)
     contours=cv2.findContours(mask_blanc, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
@@ -234,7 +234,7 @@ while True :
     cv2.putText(color_image, "px HSV: "+pixel_hsv, (10, 260),
                font, 1, (255, 255, 255), 1, cv2.LINE_AA)
     
-    mask,vert=filtre_vert(color_image,color_image_neutre)
+    mask,vert=filtre_vert(color_image)
 
     image_cropped=None
     image_cropped, rayon_vert=contours(color_image,color_image_neutre,mask,vert,depth_frame)
