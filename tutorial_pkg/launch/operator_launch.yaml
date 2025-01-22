@@ -1,0 +1,33 @@
+launch:
+
+###RVIZ
+- node:
+   pkg: "rviz2"
+   exec: "rviz2"
+   name: "rviz2"
+   args: "-d $(find-pkg-share tutorial_pkg)/rviz/rviz_move_to.rviz"
+
+- node:
+   pkg: "tutorial_pkg"
+   exec: "global_goal_publisher"
+   name: "global_goal_publisher_node"
+   param:
+   - { name: "activated", value: False }
+   - { name: "x_global", value: 8.0}
+   - { name: "y_global", value: 3.0 }
+
+- node:
+   pkg: "tutorial_pkg"
+   exec: "operator_node"
+   name: "operator_control"
+   - { name: "activated", value: False }  
+
+- node:
+   pkg: "rqt_gui"
+   exec: "rqt_gui"
+   name: "rqt_gui"
+
+- executable:
+   cmd: gnome-terminal --tab -e 'ros2 run teleop_twist_keyboard teleop_twist_keyboard'
+
+
