@@ -197,7 +197,7 @@ class Realsense(Node):
                 if isBlack :
                     square = width/high
                     isSquare= square > 0.8 and square < 1.2
-                    isRatio = ratio > 0.1 and ratio < 0.2
+                    isRatio = ratio > 0.05 and ratio < 0.2
                 else : 
                     isSquare = True
                     isRatio = ratio < 0.35 and ratio > 0.25
