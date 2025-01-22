@@ -38,7 +38,7 @@ launch:
 ###PATHFINDING
 - node:
    pkg: "grp_pibot23"
-   exec: "pathfinding_tuto"
+   exec: "pathfinding_2"
    name: "pathfinding_node"
    param:
    - { name: "is_simulation", value: False}
