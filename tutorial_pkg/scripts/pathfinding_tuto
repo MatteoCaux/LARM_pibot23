@@ -62,12 +62,8 @@ class StraightCtrl :
         self.theta_goal=atan2(self.localGoal.position.y,self.localGoal.position.x)
         self.distance_goal=sqrt(self.localGoal.position.y**2+self.localGoal.position.x**2)
 
-<<<<<<< HEAD
-
-=======
         # Declare parameter to read
         rosNode.declare_parameter('is_simulation',False)
->>>>>>> a295a664775b9e3316f3a8519db2bacc607fa39e
         rosNode.declare_parameter('tunnel_vision_width',0.50)
         rosNode.declare_parameter('time_step_random_turn',20)
         # Read the parameters
@@ -108,15 +104,11 @@ class StraightCtrl :
                 WheelDropEvent, '/events/wheel_drop',
                 self.wheel_drop, 10
             )
-<<<<<<< HEAD
             self._pubLed=rosNode.create_publisher(Led,'commands/led1',10)
             led=Led()
             led.value=0
             self._pubLed.publish(led)
         self._subToScan= rosNode.create_subscription(                                                 #in all cases
-=======
-        self._subToScan= rosNode.create_subscription(    # In all cases
->>>>>>> a295a664775b9e3316f3a8519db2bacc607fa39e
             LaserScan,scan_robot_topic ,
             self.scan_callback, 10
         )
