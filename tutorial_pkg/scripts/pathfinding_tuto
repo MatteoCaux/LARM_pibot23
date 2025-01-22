@@ -156,6 +156,9 @@ class StraightCtrl :
         self.obstacle_left_far=False
         self.obstacle_full_left_far=False
         self.obstacle_full_right_far=False
+        self.goal_straight_line_obstacle=True
+        self.goal_obstacle_right_far=True
+        self.goal_obstacle_left_far=True
         self.totalmindistance=100
         self.maxdistance=0
         self.mindistance=100
