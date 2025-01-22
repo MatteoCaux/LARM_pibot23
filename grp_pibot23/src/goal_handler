@@ -29,10 +29,10 @@ class localGoal(Node):
             Pose, "/moveto/localgoal", 10
         )
         self._pubLocalPoseMarker= self.create_publisher(
-            Marker, "/moveto/localgoalMarker", 10
+            Marker, "/moveto/localgoalMarker", 1
         )
         self._pubGlobalPoseMarker= self.create_publisher(
-            Marker, "/moveto/globalgoalMarker", 10
+            Marker, "/moveto/globalgoalMarker", 1
         )
         #Subs
         self._subToGoalPose= self.create_subscription(
