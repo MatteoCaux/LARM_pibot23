@@ -32,6 +32,8 @@ class Ghost_Marker(Node):
             self.Ghost_listener, 10
         )
 
+        self._pubSound = self.create_publisher(Sound,'/commands/sound',10)
+
         self.create_timer(0.1, self.publish_markers)
 
         # Transform tool:
@@ -94,6 +96,10 @@ class Ghost_Marker(Node):
                 GhostMarker.color.b = 0.0
 
                 self._pubGhostMarker.publish(GhostMarker)
+                sound=Sound
+                sound.value = 3
+                self._pubSound.publish(sound)
+    
     
     def deg2rad(angle):
         return (angle * 2 * np.pi)/360.0
@@ -162,9 +168,9 @@ class Ghost_Marker(Node):
 
     def distance(self,new_ghost):
         for pose in self.list_ghost:
-            d = np.sqrt((pose.position.x - new_ghost.position.x)**2 +(pose.position.y - new_ghost.position.y)**2 + (pose.position.z - new_ghost.position.z)**2 )
+            d = np.sqrt((pose.position.x - new_ghost.position.x)**2 +(pose.position.y - new_ghost.position.y)**2)
             # print(d)
-            if d < 0.5 : 
+            if d < 0.7 : 
                 self.new = False
                 return
         self.list_ghost.append(new_ghost)

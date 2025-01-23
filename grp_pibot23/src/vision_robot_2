@@ -61,7 +61,7 @@ class Realsense(Node):
 
         self.kernel= np.ones((5,5),np.uint8)
         #def min and max for green mask
-        self.min_green = np.array([25,100,50])
+        self.min_green = np.array([40,100,50])
         self.max_green = np.array([85,255,255])
         #min and max for black mask
         self.min_black = np.array([0,0,0])
@@ -136,12 +136,10 @@ class Realsense(Node):
 
         #counters of the different contours
         nb_contours_green = 0
-        self.green_square = 0
-        self.black_square=0
-        self.white_eye=0
 
         if len(contours_green) > 0:
             for c in contours_green :
+                self.green_square = 0
                 #get enclosing circle and bounding rectangle
                 ((self.x_green, self.y_green), self.green_radius)=cv2.minEnclosingCircle(c)
                 rect=cv2.boundingRect(c)
@@ -151,16 +149,18 @@ class Realsense(Node):
                 width=rect[2]
                 high=rect[3]
 
-                if self.green_radius>20:
+                ratio_square = high/width
+                isSquare = (ratio_square>0.8 and ratio_square<1.2)
+
+                if self.green_radius>20 and isSquare:
+                    self.green_square += 1
                     nb_contours_green += 1
 
+                    self.black_square=0
+                    self.white_eye=0
+                    self.black_contour=0
+
                     #creation of a cropped image to look after the eyes on a restricted area
-                    # x_max=bound[0]+width+10 if bound[0]+width+10 < self.color_image.shape[1] else bound[0]+width
-                    # y_max=bound[1]+high + 10 if bound[1]+ high+ 10 < self.color_image.shape[0] else bound[1]+high
-                    # y_min = bound[1] - 10 if bound[1] -10 > 0 else bound[1]
-                    # x_min = bound[0] - 10 if bound[0] -10 > 0 else bound[0]
-
-
                     x_max=bound[0]+width-5 if width > 10 else bound[0]+width
                     y_max=bound[1]+high -5 if high > 10 else bound[1]+high
                     y_min = bound[1] +5 if high > 10  else bound[1]
@@ -171,15 +171,14 @@ class Realsense(Node):
                     if self.crop is not None : 
                         #call color_filter for black and white masks
                         mask_black = self.color_filter(self.crop,self.min_black,self.max_black)
-                        # mask_white = self.color_filter(self.crop,self.min_white,self.max_white,True)
+                        mask_white = self.color_filter(self.crop,self.min_white,self.max_white,True)
                         self.internal_contours(mask_black,True)
-                        # self.internal_contours(mask_white,False)
+                        self.internal_contours(mask_white,False)
                         self.eyes_in_green()
 
-
-                    self.green_square += 1
-
                     cv2.rectangle(self.color_image, bound, (bound[0]+width, bound[1]+high),self.color_info, 2)
+                    self.ghost_detection()
+
             if nb_contours_green ==0 :
                 self.green_square = 0
 
@@ -197,20 +196,27 @@ class Realsense(Node):
                 if isBlack :
                     square = width/high
                     isSquare= square > 0.8 and square < 1.2
+                    # isSquare = True
                     isRatio = ratio > 0.1 and ratio < 0.2
                 else : 
                     isSquare = True
                     isRatio = ratio < 0.35 and ratio > 0.25
 
-                if isRatio and isSquare  :
-                    cv2.circle(self.crop, (int(x), int(y)), int(radius), self.color_info, 2)
-                    if isBlack : 
+                if isBlack : 
+                    if isRatio :    
+                        self.black_contour+=1
+                    if isSquare  :
                         self.black_square+=1
-                    else : 
+                        cv2.circle(self.crop, (int(x), int(y)), int(radius), self.color_info, 2)
+
+                else : 
+                    if isRatio :    
                         self.white_eye +=1
+                        cv2.circle(self.crop, (int(x), int(y)), int(radius), self.color_info, 2)
 
     def ghost_detection(self):
-        if self.white_eye >=1 and self.black_square >= 1 and self.green_square >=1 :
+        count_condition = self.black_contour + self.white_eye + self.black_square + self.green_square
+        if count_condition >= 3 :
             self.count += 1
             msg = String()
             msg.data = "Ghost detected, it is the number : " + str(self.count)
@@ -261,7 +267,6 @@ def main():
         rsNode.read_imgs()
         rsNode.publish_imgs()
         rsNode.ghost()
-        rsNode.ghost_detection()
         if rsNode.show_img : 
             rsNode.show()
         rclpy.spin_once(rsNode, timeout_sec=0.001)

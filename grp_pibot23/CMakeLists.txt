@@ -28,6 +28,7 @@ install( PROGRAMS src/operator_node DESTINATION lib/${PROJECT_NAME} )
 install(DIRECTORY
   launch
   rviz
+  stl
   DESTINATION share/${PROJECT_NAME}/
 )
 
