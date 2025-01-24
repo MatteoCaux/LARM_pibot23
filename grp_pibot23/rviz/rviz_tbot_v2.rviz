@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Marker2
         - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.5
@@ -99,10 +100,10 @@ Visualization Manager:
         Value: /moveto/globalgoalMarker
       Value: true
     - Class: rviz_default_plugins/Marker
-      Enabled: true
+      Enabled: false
       Name: Marker
       Namespaces:
-        GoalMarkers: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -110,7 +111,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /moveto/localgoalMarker
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -269,7 +270,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 0.018106725066900253
+      Distance: 9.218778610229492
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -284,10 +285,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7303978800773621
+      Pitch: 0.8153976798057556
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.285402297973633
+      Yaw: 1.0254029035568237
     Saved: ~
 Window Geometry:
   Displays:
