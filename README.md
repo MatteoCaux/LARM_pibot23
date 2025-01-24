@@ -111,3 +111,12 @@ De nombreux topic sont créer contenant de nombreuse informations utiles :
 
 '/is_manual_mode' correspond à une variable booléan utilisée par le node operator qui permet de dire à pathfinding d'arrêter ses maneuvres pour être en mode manuel.
 '/pathfinding_msg' correspond à une variable String qui stock les messages de fonctionnement de pathfinding.
+
+Le mode opérateur peut être acceder via le launch file 'operator_launch.yaml'
+
+ensuite on utilise RQT reconfigure pour acceder aux paramètres modifiables:
+operator_control: permet d'activer un mode manuel qui se commande ensuite avec le teleop ouvert, permet d'afficher les msg de pathfinding et le prct de map decouvert
+global_goal_publisher_node: permet de publier des nouveaux goal
+
+on peut aussi modifier des nodes precedemment lancer:
+map_subscriber: modifier les prcts de map decouvert qui regit l'utilisation du mode random reactif ou mode move_to

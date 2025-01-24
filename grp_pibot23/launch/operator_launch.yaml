@@ -5,7 +5,7 @@ launch:
    pkg: "rviz2"
    exec: "rviz2"
    name: "rviz2"
-   args: "-d $(find-pkg-share grp_pibot23)/rviz/rviz_simulation_2.rviz"
+   args: "-d $(find-pkg-share grp_pibot23)/rviz/rviz_tbot_v2.rviz"
 
 - node:
    pkg: "grp_pibot23"
