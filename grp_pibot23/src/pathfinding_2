@@ -207,9 +207,9 @@ class StraightCtrl :
             if self.move_to_command: self.find_obstacles_to_goal(scanMsg) #if move to , add some scanning
             for aDistance in scanMsg.ranges :
                 # For each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)   
-                if angle <0 and angle >-1.55:
+                if angle <0 and angle >-1.7:
                     if self.totalmindistance_right>aDistance:self.totalmindistance_right=aDistance
-                if angle >0 and angle <1.55:
+                if angle >0 and angle <1.7:
                     if self.totalmindistance_left>aDistance:self.totalmindistance_left=aDistance
                 if 0.09 < aDistance:
                     if aDistance < 1.1 :
