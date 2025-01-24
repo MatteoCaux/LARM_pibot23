@@ -23,7 +23,6 @@ class MapSubscriber(Node):
         self.declare_parameter('give_goal_time_step',20)
         self.declare_parameter('map_prct_stop',70)
         self.declare_parameter('map_prct_move_to',40)
-        
         #read the parameters
         self.give_goal_time_step=self.get_parameter('give_goal_time_step').value
         #Pubs
@@ -85,7 +84,7 @@ class MapSubscriber(Node):
             print("x:"+str(goal_x))
             print("y:"+str(goal_y))
             self._pubMapGoal.publish(goal_pose)
-    
+
     def take_goal_from_list(self,pixel_list):
         return(random.choice(pixel_list))
 

@@ -49,7 +49,7 @@ launch:
    exec: "map_subscriber"
    name: "map_subscriber"
    param:
-   - { name: "map_prct_stop", value: 70 }
-   - { name: "map_prct_move_to", value: 35 }
+   - { name: "map_prct_stop", value: 95 }
+   - { name: "map_prct_move_to", value: 40 }
 - executable:
    cmd: gnome-terminal --tab -e 'rqt'
