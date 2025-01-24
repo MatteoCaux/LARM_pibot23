@@ -193,6 +193,8 @@ class StraightCtrl :
         self.goal_obstacle_right_far=True
         self.goal_obstacle_left_far=True
         self.totalmindistance=100
+        self.totalmindistance_left=100
+        self.totalmindistance_right=100
         self.maxdistance=0
         self.mindistance=100
         self.full_right_min=100
@@ -204,8 +206,12 @@ class StraightCtrl :
             angle= scanMsg.angle_min
             if self.move_to_command: self.find_obstacles_to_goal(scanMsg) #if move to , add some scanning
             for aDistance in scanMsg.ranges :
-                # For each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)    
-                if 0.1 < aDistance:
+                # For each distance received we look if the obstacle is in the tunnel in front the robot and if so, where it is (right, left, far, close)   
+                if angle <0 and angle >-1.55:
+                    if self.totalmindistance_right>aDistance:self.totalmindistance_right=aDistance
+                if angle >0 and angle <1.55:
+                    if self.totalmindistance_left>aDistance:self.totalmindistance_left=aDistance
+                if 0.09 < aDistance:
                     if aDistance < 1.1 :
                         if self.totalmindistance>aDistance:self.totalmindistance=aDistance
                         if aDistance<0.35:
@@ -309,11 +315,21 @@ class StraightCtrl :
             #======================================#
             # Second case : something is too close #
             #======================================#
-            elif self.totalmindistance<0.15:                                                #if an object is too close, the robot can only rotate on itself
+            elif self.totalmindistance<0.2:                                                #if an object is too close, the robot can only rotate on itself
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z  = self.smooth_z_speed_target(0.5,0.1)
-
+            elif self.totalmindistance_right<0.25 and self.totalmindistance_left<0.25:
+                velocity.linear.x= self.smooth_x_speed_target(-0.2,0.02)
+                velocity.angular.z  = 0.0
+            elif self.totalmindistance_right<0.25:
+                message+="object to close on the right, turning around on the left\n"
+                velocity.linear.x = 0.0 #m/s
+                velocity.angular.z  = self.smooth_z_speed_target(0.5,0.1)
+            elif self.totalmindistance_left<0.25:
+                message+="object to close on the left, turning around on the right\n"
+                velocity.linear.x = 0.0 #m/s
+                velocity.angular.z  = self.smooth_z_speed_target(-0.5,0.1)
             #=================================#
             # Third case : something is close #
             #=================================#
@@ -375,20 +391,20 @@ class StraightCtrl :
                     message+="state4:far obstacle right\n"
 
                     #the robot goes to the linear speed of 0.2 smoothly
-                    velocity.linear.x=self.smooth_x_speed_target(0.2,0.02)
+                    velocity.linear.x=self.smooth_x_speed_target(0.18,0.02)
 
                     #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                    velocity.angular.z = self.smooth_z_speed_target(-0.83*self.mindistance+1.45,0.1) #rad/s                    the robot goes to the left
+                    velocity.angular.z = self.smooth_z_speed_target(-0.83*self.mindistance+1.55,0.1) #rad/s                    the robot goes to the left
     
                 # 2) something is far on the left but not on the right  
                 elif self.obstacle_left_far and not self.obstacle_right_far:
                     message+="state5:far obstacle left\n"
 
                     #the robot goes to the linear speed of 0.2 smoothly
-                    velocity.linear.x=self.smooth_x_speed_target(0.2,0.02)
+                    velocity.linear.x=self.smooth_x_speed_target(0.18,0.02)
 
                     #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                    velocity.angular.z = self.smooth_z_speed_target(-(-0.83*self.mindistance+1.45),0.1) #rad/s                   the robot goes to the right
+                    velocity.angular.z = self.smooth_z_speed_target(-(-0.83*self.mindistance+1.55),0.1) #rad/s                   the robot goes to the right
 
                 # 3) something is far both on the right and the left
                 
@@ -419,7 +435,7 @@ class StraightCtrl :
                 #the robot goes forward
                 message+="state 0:no obstacles\n"
                 velocity.angular.z = 0.0#rad/s
-                velocity.linear.x=self.smooth_x_speed_target(0.7,0.02)    
+                velocity.linear.x=self.smooth_x_speed_target(0.55,0.015)    
 
             #previous values
             self.previous_z=velocity.angular.z
@@ -469,7 +485,17 @@ class StraightCtrl :
                 message+="object to close, turning around\n"
                 velocity.linear.x = 0.0 #m/s
                 velocity.angular.z  = 0.5
-
+            elif self.totalmindistance_right<0.25 and self.totalmindistance_left<0.25:
+                velocity.linear.x= self.smooth_x_speed_target(-0.2,0.02)
+                velocity.angular.z  = 0.0 #m/s
+            elif self.totalmindistance_right<0.25:
+                message+="object to close on the right, turning around on the left\n"
+                velocity.linear.x = 0.0 #m/s
+                velocity.angular.z  = self.smooth_z_speed_target(0.5,0.1)
+            elif self.totalmindistance_left<0.25:
+                message+="object to close on the left, turning around on the right\n"
+                velocity.linear.x = 0.0 #m/s
+                velocity.angular.z  = self.smooth_z_speed_target(-0.5,0.1)
             #=================================#
             # Third case : something is close #
             #=================================#
@@ -499,7 +525,7 @@ class StraightCtrl :
 
                     #We adapt our speed to the current one
 
-                    velocity.linear.x=self.smooth_x_speed_target(0.16,0.02)
+                    velocity.linear.x=self.smooth_x_speed_target(0.15,0.02)
 
 
                     #is there something far on the left ?    
@@ -514,7 +540,7 @@ class StraightCtrl :
 
                     #We adapt our speed to the current one              
 
-                    velocity.linear.x=self.smooth_x_speed_target(0.16,0.02)
+                    velocity.linear.x=self.smooth_x_speed_target(0.15,0.02)
 
                     #is there something far on the right ?     
                     if not self.obstacle_full_right_far:                                     #if not the robot turn to the right
@@ -535,20 +561,20 @@ class StraightCtrl :
                     message+="state4:far obstacle right\n"
 
                     #the robot goes to the linear speed of 0.2 smoothly
-                    velocity.linear.x=self.smooth_x_speed_target(0.2,0.02)
+                    velocity.linear.x=self.smooth_x_speed_target(0.18,0.02)
 
                     #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                    velocity.angular.z = self.smooth_z_speed_target(-0.83*self.mindistance+1.45 ,0.1)#rad/s                    the robot goes to the left
+                    velocity.angular.z = self.smooth_z_speed_target(-0.83*self.mindistance+1.55 ,0.1)#rad/s                    the robot goes to the left
     
                 # 2) something is far on the left but not on the right  
                 elif self.obstacle_left_far and not self.obstacle_right_far:
                     message+="state5:far obstacle left\n"
 
                     #the robot goes to the linear speed of 0.2 smoothly
-                    velocity.linear.x=self.smooth_x_speed_target(0.2,0.02)
+                    velocity.linear.x=self.smooth_x_speed_target(0.18,0.02)
 
                     #the angle is adapted to the distance (the closer the obstacle is, the greater is the angle)
-                    velocity.angular.z = self.smooth_z_speed_target(-(-0.83*self.mindistance+1.45),0.1) #rad/s                   the robot goes to the right
+                    velocity.angular.z = self.smooth_z_speed_target(-(-0.83*self.mindistance+1.55),0.1) #rad/s                   the robot goes to the right
 
                 # 3) something is far both on the right and the left
                 
@@ -569,7 +595,7 @@ class StraightCtrl :
                             velocity.angular.z=self.smooth_z_speed_target(base_angular_speed,0.1) #rad/s                           the robot goes to the left
                         else:
                             velocity.angular.z = self.smooth_z_speed_target(-base_angular_speed,0.1) #rad/s                        the robot goes to the right
-                    velocity.linear.x=self.smooth_x_speed_target(0.15,0.03)
+                    velocity.linear.x=self.smooth_x_speed_target(0.12,0.02)
                     #the robot goes to the linear speed of 0.15 smoothly
             
             #===============================================#
@@ -591,7 +617,7 @@ class StraightCtrl :
             else:
                 #the robot goes forward
                 velocity.angular.z = self.orientate_to_goal()#rad/s
-                velocity.linear.x=self.smooth_x_speed_target(0.6,0.012)
+                velocity.linear.x=self.smooth_x_speed_target(0.55,0.012)
                 message+="state 0:no obstacles\n"
             
             #previous values
