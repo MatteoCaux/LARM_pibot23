@@ -18,21 +18,19 @@ class Pacman_Marker(Node):
         self.declare_parameter('pacman_path','/home/imtne.local/kristian.bouvet/ros_space/src/LARM_pibot23/tutorial_pkg/stl')
         self.pacman_path=self.get_parameter('pacman_path').value
 
+        #creation of the publisher
         self._pubPacmanMarker = self.create_publisher(Marker, "/PacmanMarker", 10)
-
         self.create_timer(0.1, self.publish_markers)
+        self.local_frame = 'base_footprint'
 
         # Transform tool:
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-        self.local_frame = 'base_footprint'
 
     def publish_markers(self):
+        """publish a pacman marker at the robor position at each moment"""
         pose=Pose()
-        # adjust pose
-        # pose.position.y -= 1.5 
-        # pose.position.x -= 0.5 
         currentTime= rclpy.time.Time()
         # Get Transformation
         try:

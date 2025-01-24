@@ -2,12 +2,11 @@
 
 ## Auteurs
 
-Mattéo CAUX 
-Kristian BOUVET
-PAul MILLEMANN
+Mattéo CAUX, Kristian BOUVET, Paul MILLEMANN
 
 ## Introduction
-Ce répertoire est un package ROS2 pour le contrôle d'un robot Kobuki.
+Ce répertoire contient 3 packages ROS2 pour le contrôle d'un robot Kobuki. 
+Ne pas utiliser les packages "tuto_vison" et "tutorial_pkg", ce sont les packages tests. Seul le package "grp_pibot23" est à utiliser pour les challenges
 
 ## Table des matières <!-- omit from toc -->
 - [Auteurs](#auteurs)
@@ -83,13 +82,13 @@ Pour le challenge 1, vous pouvez :
 - Lancer le fichier `tbot_v1_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 tbot_v1_launch.yaml`
 
 
-Certains fichier du challenge 1 ont été modifié pour accomplir le challenge 2, ainsi pour retrouver les fichiers du challenge 1, veuillez vous référez au commit `c645cce`. Moreover, each files useful for the challenge 1 as been rename with `_1` to differ them from the challenge 2 files.
+Les fichiers du challenge 1 ont été renommés avec `_1` pour les différencier des fichiers du challenge 2.
 
 ## Challenge 2
 
 ### Objectifs
 
-L'objectif du challenge 2 est de reprendre les fonctionnalités du challenge 1 en y ajoutant de nouvelles caractéristiques. La détection des fantômes est plus fine si bien que les faux positifs sont évités et qu'un robot n'est détcté qu'une seule fois. Une carte de l'environnement est créée en direct et les fantômes détectés sont représentés dessus.
+L'objectif du challenge 2 est de reprendre les fonctionnalités du challenge 1 en y ajoutant de nouvelles caractéristiques. La détection des fantômes est plus fine si bien que les faux positifs sont évités et que le robot est capable de reconnaitre un fantome déjà détecté. Une carte de l'environnement est créée en direct et les fantômes détectés sont représentés dessus.
 
 ### Lancement du challenge 2
 
@@ -97,26 +96,26 @@ Pour le challenge 2, vous pouvez :
 
 - Lancer le fichier `simulation_v2_launch.yaml` pour la partie simulation : `ros2 launch grp_pibot23 simulation_v2_launch.yaml`
 - Lancer le fichier `tbot_v2_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 tbot_v2_launch.yaml`
-- Lancer le fichier `operator_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 operator_launch.yaml`
-- - Lancer le fichier ?? pour la partie vision: ..
+- Lancer le fichier `operator_launch.yaml` pour la partie opérateur à distance : `ros2 launch grp_pibot23 operator_launch.yaml`
+- - Lancer le fichier `vision_launch.yaml` pour la partie vision: `ros2 launch grp_pibot23 vision_launch.yaml`.
 
-De nombreux topic sont créer contenant de nombreuse informations utiles :
+De nombreux topics sont créés contenant de nombreuses informations utiles :
 
-`/is_pathfinding_on_move_to` stock une variable booléan qui définit si le node pathfinding_2 doit suivre un goal (etat : True) ou être en navigation aléatoire réactive (etat : False).
+`/is_pathfinding_on_move_to` stock une variable booléan qui définit si le node pathfinding_2 doit suivre un goal (état : True) ou être en navigation aléatoire réactive (état : False).
 
-'/moveto/globalgoal' correspond à une variable Pose d'un objectif de position dans le repère '/map', '/moveto/globalgoalMarker' est le marqueur correspondant.
-'/moveto/localgoal' correspond à une variable Pose d'un objectif de position dans le repère '/base_link du robot', '/moveto/localgoalMarker' est le marqueur correspondant.
+`/moveto/globalgoal` correspond à une variable Pose d'un objectif de position dans le repère `/map`, `/moveto/globalgoalMarker` est le marqueur correspondant.
+`/moveto/localgoal` correspond à une variable Pose d'un objectif de position dans le repère `/base_link du robot`, `/moveto/localgoalMarker` est le marqueur correspondant.
 
-'/map_prct_discovered' correspond à un pourcentage de la map découverte, et permet de choisir dans quelle mode de déplacement se trouve pathfinding.
+`/map_prct_discovered` correspond à un pourcentage de la map découverte, et permet de choisir dans quelle mode de déplacement se trouve pathfinding.
 
-'/is_manual_mode' correspond à une variable booléan utilisée par le node operator qui permet de dire à pathfinding d'arrêter ses maneuvres pour être en mode manuel.
-'/pathfinding_msg' correspond à une variable String qui stock les messages de fonctionnement de pathfinding.
+`/is_manual_mode` correspond à une variable booléan utilisée par le node operator qui permet de dire à pathfinding d'arrêter ses maneuvres pour être en mode manuel.
+`/pathfinding_msg` correspond à une variable String qui stock les messages de fonctionnement de pathfinding.
 
-Le mode opérateur peut être acceder via le launch file 'operator_launch.yaml'
+Le mode opérateur peut être acceder via le launch file `operator_launch.yaml`.
 
-ensuite on utilise RQT reconfigure pour acceder aux paramètres modifiables:
-operator_control: permet d'activer un mode manuel qui se commande ensuite avec le teleop ouvert, permet d'afficher les msg de pathfinding et le prct de map decouvert
-global_goal_publisher_node: permet de publier des nouveaux goal
+Ensuite on utilise RQT reconfigure pour acceder aux paramètres modifiables:
+- operator_control: permet d'activer un mode manuel qui se commande ensuite avec le teleop ouvert, permet d'afficher les msg de pathfinding et le prct de map decouvert
+- global_goal_publisher_node: permet de publier des nouveaux goal
 
-on peut aussi modifier des nodes precedemment lancer:
+On peut aussi modifier des nodes precedemment lancer:
 map_subscriber: modifier les prcts de map decouvert qui regit l'utilisation du mode random reactif ou mode move_to

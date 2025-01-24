@@ -14,7 +14,7 @@ from geometry_msgs.msg import Point32
 class Realsense(Node):
     def __init__(self, fps= 60):
         super().__init__('realsense')
-        self.declare_parameter('show_img',True)
+        self.declare_parameter('show_img',True) #parameter to show or not the visualization
         self.show_img=self.get_parameter('show_img').value
 
         # Configure depth and color streams
@@ -103,6 +103,7 @@ class Realsense(Node):
         self.depth_publisher.publish(msg_depth)        
 
     def color_filter(self,image,mask_min,mask_max,iswhite=False):
+        """create a mask following the min and max hsv given"""
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         mask=cv2.inRange(hsv,mask_min,mask_max)
@@ -115,6 +116,8 @@ class Realsense(Node):
         return mask
 
     def pointXYZ(self,pixel):
+        """return the position of a point according it pixel"""
+
         if pixel is None : 
             return
         
@@ -128,6 +131,7 @@ class Realsense(Node):
 
 
     def ghost(self):
+        """main fonction to determine if a ghost is detected"""
         #call color_filter to have the green mask
         self.green_mask=self.color_filter(self.color_image,self.min_green,self.max_green)
 
@@ -140,6 +144,7 @@ class Realsense(Node):
         if len(contours_green) > 0:
             for c in contours_green :
                 self.green_square = 0
+
                 #get enclosing circle and bounding rectangle
                 ((self.x_green, self.y_green), self.green_radius)=cv2.minEnclosingCircle(c)
                 rect=cv2.boundingRect(c)
@@ -149,6 +154,7 @@ class Realsense(Node):
                 width=rect[2]
                 high=rect[3]
 
+                #compute if it as a shape square
                 ratio_square = high/width
                 isSquare = (ratio_square>0.8 and ratio_square<1.2)
 
@@ -169,9 +175,10 @@ class Realsense(Node):
                     self.crop = self.color_image[y_min:y_max,x_min:x_max]
 
                     if self.crop is not None : 
-                        #call color_filter for black and white masks
+                        #call color_filter for black and white masks 
                         mask_black = self.color_filter(self.crop,self.min_black,self.max_black)
                         mask_white = self.color_filter(self.crop,self.min_white,self.max_white,True)
+                        #look for internal countours to see if black and white eyes are detected in the green shape
                         self.internal_contours(mask_black,True)
                         self.internal_contours(mask_white,False)
                         self.eyes_in_green()
@@ -183,6 +190,7 @@ class Realsense(Node):
                 self.green_square = 0
 
     def internal_contours(self, mask, isBlack):
+        """check countours for black and white mask"""
         contours=cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
         if len(contours) > 0:
             for c in contours :
@@ -215,8 +223,9 @@ class Realsense(Node):
                         cv2.circle(self.crop, (int(x), int(y)), int(radius), self.color_info, 2)
 
     def ghost_detection(self):
+        """Publish the ghost position if the condition are set"""
         count_condition = self.black_contour + self.white_eye + self.black_square + self.green_square
-        if count_condition >= 3 :
+        if count_condition >= 3 : #Between all the conditon, 3 needs to be found to publish a ghost
             self.count += 1
             msg = String()
             msg.data = "Ghost detected, it is the number : " + str(self.count)
@@ -229,6 +238,7 @@ class Realsense(Node):
             self.coord.publish(msg)
 
     def eyes_in_green(self):
+        """another check for the eye but wise the "anti" green mask"""
         green_crop = self.color_filter(self.crop,self.min_green,self.max_green,False)
         self.not_green = cv2.bitwise_not(green_crop)
         self.not_green = cv2.morphologyEx(self.not_green, cv2.MORPH_OPEN, self.kernel)
@@ -243,13 +253,7 @@ class Realsense(Node):
                     cv2.circle(self.crop, (int(x), int(y)), int(radius), self.color_info, 2)
                     self.white_eye +=1    
 
-        #print(green_crop)
-
     def show(self):
-        # Show images
-        #images = np.hstack((self.color_image, self.depth_colormap))#,self.infra_colormap_1,self.infra_colormap_2))
-        #green = np.hstack((self.res2_vert,self.closing))
-
         # Show images
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
         cv2.imshow('RealSense', self.color_image)
