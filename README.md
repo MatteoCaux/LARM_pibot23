@@ -64,7 +64,7 @@ source ~/ros_space/install/local_setup.bash
 
 
 ### Build des packages
-Dans le ROS2 workspace, il faut build les packages:
+Dans le ROS2 workspace, il faut build les packages :
 - `./pkg-tbot/bin/install`
 - `colcon build`
 - `source install/setup.sh`
@@ -100,14 +100,14 @@ Pour le challenge 2, vous pouvez :
 - Lancer le fichier `operator_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 operator_launch.yaml`
 - - Lancer le fichier ?? pour la partie vision: ..
 
-De nombreux topic sont créer contenant de nombreuse informations utiles:
+De nombreux topic sont créer contenant de nombreuse informations utiles :
 
-`/is_pathfinding_on_move_to` stock une variable booléan qui définit si le node pathfinding_2 doit suivre un goal(etat: True) ou être en navigation aléatoire réactive(etat:False)
+`/is_pathfinding_on_move_to` stock une variable booléan qui définit si le node pathfinding_2 doit suivre un goal (etat : True) ou être en navigation aléatoire réactive (etat : False).
 
-/moveto/globalgoal correspond a une variable Pose d'un objectif de position dans le repère /map, /moveto/globalgoalMarker est le marqueur correspondant
-/moveto/localgoal correspond a une variable Pose d'un objectif de position dans le repère /base_link du robot,/moveto/localgoalMarker est le marqueur correspondant
+'/moveto/globalgoal' correspond à une variable Pose d'un objectif de position dans le repère '/map', '/moveto/globalgoalMarker' est le marqueur correspondant.
+'/moveto/localgoal' correspond à une variable Pose d'un objectif de position dans le repère '/base_link du robot', '/moveto/localgoalMarker' est le marqueur correspondant.
 
-/map_prct_discovered correspond à un pourcentage de la map découverte, permet de choisir dans quelle mode de déplacement se trouve pathfinding
+'/map_prct_discovered' correspond à un pourcentage de la map découverte, et permet de choisir dans quelle mode de déplacement se trouve pathfinding.
 
-/is_manual_mode correspond à une variable booléan utilisé par le node operator qui permet de dire à pathfinding d'arreter ses maneuvres pour être en mode manuel
-/pathfinding_msg correspon à une variable String qui stock les messages de fonctionnement de pathfinding.
+'/is_manual_mode' correspond à une variable booléan utilisée par le node operator qui permet de dire à pathfinding d'arrêter ses maneuvres pour être en mode manuel.
+'/pathfinding_msg' correspond à une variable String qui stock les messages de fonctionnement de pathfinding.
