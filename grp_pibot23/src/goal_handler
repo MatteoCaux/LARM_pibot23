@@ -44,7 +44,6 @@ class localGoal(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         # Node Attribute:
         self.local_frame= 'base_link'
-
         self.create_timer(0.1, self.publish_goal)
 
     #Subs calls
@@ -69,6 +68,7 @@ class localGoal(Node):
         self.publish_markers(localGoal)
 
     def publish_markers(self,local_goal):
+        # Publish the local and global goal markers for visualization in RVIZ
         LocalPoseMarker=Marker()
         GlobalPoseMarker=Marker()
         LocalPoseMarker.header.frame_id='base_link'
