@@ -15,6 +15,7 @@ def main():
 class operatorNode(Node):
     def __init__(self):
         super().__init__('operator_node')
+        # Declaration of parameters
         self.declare_parameter('manual_teleop',False)
         self.declare_parameter('show_map_prct',False)
         self.declare_parameter('show_pathfinding_msgs',False)
@@ -33,15 +34,18 @@ class operatorNode(Node):
                 String, '/pathfinding_msg',
                 self.path_msg_sub, 10
             )
-
+    #Subs functions
     def map_prct_sub(self,msg):
+        # Gets and show the map prct if the parameter is activated
         if self.get_parameter('show_map_prct').value:
             self.get_logger().info( f'Pourcentage découvert:{msg.data}')
     def path_msg_sub(self,msg):
+        # Gets and show pathfinding node msgs if the parameter is activated
         if self.get_parameter('show_pathfinding_msgs').value:
             self.get_logger().info( f'{msg.data}')
-    #Process funcs
+    #Pub functions
     def publish_goal(self):
+        # Publish the state of manual teleop parameter, it will be read by pathfinding to ajdust its behaviour
         message=Bool()
         message.data=self.get_parameter('manual_teleop').value
         self._pubOPstatus.publish(message)
