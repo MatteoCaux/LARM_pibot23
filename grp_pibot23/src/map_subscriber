@@ -19,11 +19,13 @@ def main():
 class MapSubscriber(Node):
     def __init__(self):
         super().__init__('map_subscribers')
+        # Class variables
         self.is_publishing_goal_pose=False
+        # Declare the parameters
         self.declare_parameter('give_goal_time_step',20)
         self.declare_parameter('map_prct_stop',70)
         self.declare_parameter('map_prct_move_to',40)
-        #read the parameters
+        # Read the parameters
         self.give_goal_time_step=self.get_parameter('give_goal_time_step').value
         #Pubs
         self._pubPathfindingState= self.create_publisher(
@@ -47,6 +49,7 @@ class MapSubscriber(Node):
 
     #Subs functions
     def subMap_data_handler(self,MapMsg):
+        # Analyses the received map and handles the states of it; completion; pathfinding strategy
         self.height=MapMsg.info.height
         self.width=MapMsg.info.width
         self.res=MapMsg.info.resolution
@@ -71,6 +74,7 @@ class MapSubscriber(Node):
             self.is_publishing_goal_pose=False
 
     def give_goal(self):
+        # Uses all the functions above to choose a goal and publish it
         if self.is_publishing_goal_pose:
             print("publie un nouveau goal")
             goal_options=self.get_pixel_touching_border()
@@ -86,9 +90,11 @@ class MapSubscriber(Node):
             self._pubMapGoal.publish(goal_pose)
 
     def take_goal_from_list(self,pixel_list):
+        # Takes a random pixel from the given list, could be upgraded to choice a wiser goal
         return(random.choice(pixel_list))
 
     def get_completed_prct(self):
+        # Get the ratio of white (accessible) pixel on total pixel, could be upgraded by taking more constraining limits for the map and avoiding black pixel and gray pixel that are surrounded by black pixels
         compteur=0
         for i in range(self.height):
             for j in range(self.width):
@@ -98,6 +104,7 @@ class MapSubscriber(Node):
         return(compteur/(self.height*self.width)*100)
 
     def get_pixel_touching_border(self):
+        # Returns all the gray (undiscovered) pixels that touches a white (accessible) pixel
         res_array=[]
         for i in range(self.height):
             for j in range(self.width):
@@ -108,6 +115,7 @@ class MapSubscriber(Node):
         return(res_array)
     
     def filter_the_map(self,map_array):
+        # Uses filter function on the whole map_array, keeping pixel that returns True when filtered
         map_array_filtered=[]
         for p in map_array:
             if self.filter(p[0],p[1]):
@@ -116,9 +124,11 @@ class MapSubscriber(Node):
 
 
     def find_pixel(self,i,j):
+        # Function that permit to access pixel from the list with the index of the line and column
        return(self.data[i*self.width+j])
 
     def filter(self,i,j):
+        # Filter the designated pixel (i,j), returning True if it has more than 1 similar pixel around it. False otherwise.
         res=0
         if not i<=0:
             if self.data[(i-1)*self.width+j]==color:res+=1
@@ -132,7 +142,7 @@ class MapSubscriber(Node):
         else:return(True)
 
     def check_around_pixel(self,i,j,color):
-        #check if pixels around (in a cross) the targeted pixel are white
+        # Check if pixels around (in a cross) the targeted pixel are the value of color 
         res=False
         if not i<=0:
             if self.data[(i-1)*self.width+j]==color:res=True
