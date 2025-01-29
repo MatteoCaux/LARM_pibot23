@@ -46,7 +46,7 @@ Les éléments suivants doivent être installés pour pouvoir faire fonctionner 
 > Commande :  
 > `pip install numpy colcon-common-extensions opencv-python pyrealsense2 cvbridge3 scikit-image`
 
--  $`\textcolor{red}{\text{[OPTIONAL]}}`$ Teleop twist keyboard (to control manually the robot)
+-  $`\textcolor{red}{\text{[OPTIONNEL]}}`$ Teleop twist keyboard (pour controller manuellement le robot)
 
 ### Configuration
 Ajouter les lignes suivantes à votre fichier `~/.bashrc` :
@@ -97,25 +97,29 @@ Pour le challenge 2, vous pouvez :
 - Lancer le fichier `simulation_v2_launch.yaml` pour la partie simulation : `ros2 launch grp_pibot23 simulation_v2_launch.yaml`
 - Lancer le fichier `tbot_v2_launch.yaml` pour la partie réelle : `ros2 launch grp_pibot23 tbot_v2_launch.yaml`
 - Lancer le fichier `operator_launch.yaml` pour la partie opérateur à distance : `ros2 launch grp_pibot23 operator_launch.yaml`
-- - Lancer le fichier `vision_launch.yaml` pour la partie vision: `ros2 launch grp_pibot23 vision_launch.yaml`.
+- Lancer le fichier `vision_launch.yaml` pour la partie vision: `ros2 launch grp_pibot23 vision_launch.yaml`.
 
 De nombreux topics sont créés contenant de nombreuses informations utiles :
 
 `/is_pathfinding_on_move_to` stock une variable booléan qui définit si le node pathfinding_2 doit suivre un goal (état : True) ou être en navigation aléatoire réactive (état : False).
 
 `/moveto/globalgoal` correspond à une variable Pose d'un objectif de position dans le repère `/map`, `/moveto/globalgoalMarker` est le marqueur correspondant.
+
 `/moveto/localgoal` correspond à une variable Pose d'un objectif de position dans le repère `/base_link du robot`, `/moveto/localgoalMarker` est le marqueur correspondant.
 
 `/map_prct_discovered` correspond à un pourcentage de la map découverte, et permet de choisir dans quelle mode de déplacement se trouve pathfinding.
 
-`/is_manual_mode` correspond à une variable booléan utilisée par le node operator qui permet de dire à pathfinding d'arrêter ses maneuvres pour être en mode manuel.
+`/is_manual_mode` correspond à une variable booléan utilisée par le node operator qui permet de dire à pathfinding d'arrêter ses manoeuvres pour être en mode manuel.
+
 `/pathfinding_msg` correspond à une variable String qui stock les messages de fonctionnement de pathfinding.
 
 Le mode opérateur peut être acceder via le launch file `operator_launch.yaml`.
 
 Ensuite on utilise RQT reconfigure pour acceder aux paramètres modifiables:
-- operator_control: permet d'activer un mode manuel qui se commande ensuite avec le teleop ouvert, permet d'afficher les msg de pathfinding et le prct de map decouvert
-- global_goal_publisher_node: permet de publier des nouveaux goal
+- operator_control: permet d'activer un mode manuel qui se commande ensuite avec le teleop ouvert, permet d'afficher les messages de pathfinding et le pourcentage de map decouverte
+- global_goal_publisher_node: permet de publier des nouveaux goals
 
 On peut aussi modifier des nodes precedemment lancer:
-map_subscriber: modifier les prcts de map decouvert qui regit l'utilisation du mode random reactif ou mode move_to
+map_subscriber: modifier les pourcentages de map decouverte qui regit l'utilisation du mode random reactif ou du mode move_to
+
+Pour voir une présentation de notre réalisation, vous pouvez vous référer à cette vidéo : https://youtu.be/n4lK_Ia8cX4
